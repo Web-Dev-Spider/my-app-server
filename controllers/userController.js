@@ -9,7 +9,7 @@ const login = (req, res) => {
       return res.json({ success: true, message: "Login successful" });
     }
   }
-  res.json({ success: false, message: "Invalid email or password" });
+  res.status(401).json({ success: false, message: "Invalid email or password" });
 };
 module.exports = {
   login,
