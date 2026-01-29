@@ -10,7 +10,7 @@ const userRouter = require("./routes/userRouter.js");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors({ origin: "https://my-app-client-inky.vercel.app/", credentials: true }));
+app.use(cors({ origin: "https://my-app-client-inky.vercel.app", credentials: true }));
 app.use(express.json());
 
 app.use("/user", userRouter);
