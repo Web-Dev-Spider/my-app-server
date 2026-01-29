@@ -7,7 +7,7 @@ const agencySchema = new mongoose.Schema(
     email: { type: String, unique: [true, "This email already exists"], required: [true, "Email is required"] },
 
     sapcode: { type: String, unique: true },
-    company: { type: String, enum: ["IOCL", "HPCL", "BPCL"], unique: true },
+    company: { type: String, enum: ["IOCL", "HPCL", "BPCL"] },
 
     profile: {
       type: mongoose.Schema.Types.ObjectId,
