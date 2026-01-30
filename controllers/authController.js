@@ -52,7 +52,7 @@ const register = async (req, res, next) => {
         expiresIn: "1d",
       });
       if (newUser) {
-        res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token });
+        res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token, success: true });
       }
     }
   } catch (error) {
