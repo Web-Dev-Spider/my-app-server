@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-
+const PERMISSIONS = require("../config/permissions");
 const { hashPassword, comparePassword } = require("../utils/hashPassword");
 const Agency = require("../models/Agency");
 
@@ -36,13 +36,17 @@ const register = async (req, res, next) => {
     const newAgency = await Agency.create({ name: gasAgencyName, sapcode, email, password, company });
     console.log("Response received while createing", newAgency);
     if (newAgency) {
+      const ALL_PERMISSIONS = Object.values(PERMISSIONS);
       const newUser = await User.create({
         agencyId: newAgency._id,
-        role: "admin",
+        role: "ADMIN",
         username: "admin",
         password,
         company,
+        permissions: ALL_PERMISSIONS,
+        createdBy: null,
       });
+      console.log("Response received while createing user", newUser);
 
       const token = jwt.sign({ id: newUser._id, agencyId: newAgency._id, role: newUser.role }, process.env.JWT_SECRET, {
         expiresIn: "1d",

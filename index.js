@@ -12,7 +12,7 @@ const connectDB = require("./config/db.js");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors({ origin: ["https://my-app-client-inky.vercel.app", "http://localhost:5174"], credentials: true }));
+app.use(cors({ origin: ["https://my-app-client-inky.vercel.app", "http://localhost:5173"], credentials: true }));
 app.use(express.json());
 
 app.use("/auth", authRouter);
