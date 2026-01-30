@@ -1,16 +1,22 @@
-const jwt = require("jsonwebtoken");
-
-module.exports = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }
-
+const { verifyToken } = require("../utils/jwt");
+const authenticate = async (req, res, next) => {
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    // const token = req.headers.authorization?.split(" ")[1];
+    const token = req.cookies?.token;
+    if (!token) {
+      res.status(401).json({ success: false, message: "Not Authenticated ...Access denied" });
+    }
+
+    const decoded = verifyToken(token);
+
+    req.user = decoded; // attach the decoded token to the req.user object.
+
     next();
   } catch (error) {
-    return res.status(403).json({ success: false, message: "Forbidden" });
+    res.status(401).json({ success: false, message: "Invalid token ...Access denied", error: error.message });
   }
+};
+
+module.exports = {
+  authenticate,
 };

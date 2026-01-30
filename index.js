@@ -1,10 +1,11 @@
-require("dotenv").config();
+require("./config/envConfig.js");
 
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
-const PORT = process.env.PORT || 3000;
+const { PORT, BASE_URL, LOCAL_HOST } = require("./config/envConfig.js");
 const userRouter = require("./routes/userRouter.js");
 const authRouter = require("./routes/authRouter.js");
 const connectDB = require("./config/db.js");
@@ -12,8 +13,9 @@ const connectDB = require("./config/db.js");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors({ origin: ["https://my-app-client-inky.vercel.app", "http://localhost:5173"], credentials: true }));
+app.use(cors({ origin: [BASE_URL, LOCAL_HOST], credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
