@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   mobile: { type: Number },
   user_id: { type: Number },
-  username: { type: String, unique: true },
+  username: { type: String },
   password: String,
   agencyId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+userSchema.pre("save", async function () {
+  if (this.role !== "ADMIN" && this.username === "admin") {
+    throw new Error("Username 'admin' is reserved");
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);

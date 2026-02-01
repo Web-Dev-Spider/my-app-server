@@ -35,11 +35,12 @@ const register = async (req, res, next) => {
 
     //if agency is created then create admin user
     if (newAgency) {
+      const username = "admin";
       const ALL_PERMISSIONS = Object.values(PERMISSIONS);
       const newUser = await User.create({
         agencyId: newAgency._id,
         role: "ADMIN",
-        username: "admin",
+        username,
         email,
         password: hashedPassword,
         company,
@@ -48,12 +49,10 @@ const register = async (req, res, next) => {
       });
       // console.log("Response received while createing user", newUser);
 
-      const token = generateJwtToken(newUser._id, newUser.role, gasAgencyName, username);
-
-      res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
-      res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, success: true });
-
       if (newUser) {
+        const token = generateJwtToken(newUser._id, newUser.role, gasAgencyName, username);
+        res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
+        res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, success: true });
         res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token, success: true });
       }
     }
