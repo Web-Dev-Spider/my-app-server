@@ -48,22 +48,14 @@ const register = async (req, res, next) => {
       });
       // console.log("Response received while createing user", newUser);
 
-<<<<<<< HEAD
       const token = generateJwtToken(newUser._id, newUser.role, gasAgencyName, username);
 
       res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
       res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, success: true });
-      // if (newUser) {
-      //   res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token, success: true });
-      // }
-=======
-      const token = jwt.sign({ id: newUser._id, agencyId: newAgency._id, role: newUser.role }, process.env.JWT_SECRET, {
-        expiresIn: "1d",
-      });
+
       if (newUser) {
         res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token, success: true });
       }
->>>>>>> ef5cab48b2a6c8283432f86c2ae706b354dee084
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
