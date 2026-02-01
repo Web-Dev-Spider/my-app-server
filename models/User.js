@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   mobile: { type: Number },
   user_id: { type: Number },
   username: { type: String },
-  password: String,
+  password: { type: String, select: false, required: [true, "Password is required"] },
   agencyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Agency", //required:true,

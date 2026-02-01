@@ -50,10 +50,11 @@ const register = async (req, res, next) => {
       // console.log("Response received while createing user", newUser);
 
       if (newUser) {
-        const token = generateJwtToken(newUser._id, newUser.role, gasAgencyName, username);
+        const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
         res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
         res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, success: true });
-        res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, token, success: true });
+      } else {
+        res.status(500).json({ success: false, message: "Error creating user" });
       }
     }
   } catch (error) {
@@ -75,7 +76,8 @@ const login = async (req, res, next) => {
     if (/^\d+$/.test(identifier)) {
       orConditions.push({ mobile: Number(identifier) });
     }
-    const userExists = await User.findOne({ $or: orConditions });
+    //password select is false in userschema, so here we need to add select password to compare user password
+    const userExists = await User.findOne({ $or: orConditions }).select("+password");
     if (!userExists) {
       return res.status(404).json({
         success: false,
@@ -83,20 +85,20 @@ const login = async (req, res, next) => {
       });
     }
 
-    const validPassword = comparePassword(password, userExists.password);
+    const validPassword = await comparePassword(password, userExists.password);
     if (!validPassword) {
       return res.status(404).json({ success: false, message: "Invalid login credentials" });
     }
 
     //generate token
-    const token = generateJwtToken(userExists._id, userExists.role);
+    const token = generateJwtToken({ userid: userExists._id, role: userExists.role });
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
     });
-
+    console.log("Token generated", token);
     if (userExists.role === "admin") {
       redirectTo = "/admin/dashboard";
       // } else if ((userExists.role = "doctor")) {
@@ -106,14 +108,33 @@ const login = async (req, res, next) => {
     } else {
       redirectTo = "/";
     }
-    res.status(200).json({ success: true, message: "Login successful", user: userExists, token });
+
+    //Delete password from existing user to send in response
+    const userSafe = userExists.toObject();
+    delete userSafe.password;
+
+    res.status(200).json({ success: true, message: "Login successful", user: userSafe, token });
   } catch (error) {
     next(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+const me = async (req, res) => {
+  res.json({
+    success: true,
+    user: req.user,
+  });
+};
+
+const logout = (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ success: true, message: "Logout successful" });
+};
+
 module.exports = {
   register,
   login,
+  me,
+  logout,
 };
