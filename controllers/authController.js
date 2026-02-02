@@ -50,9 +50,9 @@ const register = async (req, res, next) => {
       // console.log("Response received while createing user", newUser);
 
       if (newUser) {
-        const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
-        res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
-        res.status(201).json({ message: "Agency Added and admin created", newAgency, newUser, success: true });
+        // const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
+        // res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
+        res.status(201).json({ message: "Agency Added and admin created", success: true });
       } else {
         res.status(500).json({ success: false, message: "Error creating user" });
       }
@@ -89,42 +89,55 @@ const login = async (req, res, next) => {
     if (!validPassword) {
       return res.status(404).json({ success: false, message: "Invalid login credentials" });
     }
+    //Delete password from existing user to send in response
+    const userSafe = userExists.toObject();
+    delete userSafe.password;
+    // console.log("User safe", userSafe);
+
+    const agency = await Agency.findById(userExists.agencyId);
+    // console.log("agency", agency);
+    // console.log("Agency", agency);
 
     //generate token
-    const token = generateJwtToken({ userid: userExists._id, role: userExists.role });
+    const token = generateJwtToken({ user: userSafe, role: userExists.role, agency });
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
     });
-    console.log("Token generated", token);
-    if (userExists.role === "admin") {
-      redirectTo = "/admin/dashboard";
-      // } else if ((userExists.role = "doctor")) {
-      //   redirectTo = "/doctor/dashboard";
-      // } else if (userExists.role === "patient") {
-      //   redirectTo = "/patient/dashboard";
-    } else {
-      redirectTo = "/";
-    }
+    // console.log("Token generated", token);
+    // if (userExists.role === "admin") {
+    //   redirectTo = "/admin/dashboard";
+    //   // } else if ((userExists.role = "doctor")) {
+    //   //   redirectTo = "/doctor/dashboard";
+    //   // } else if (userExists.role === "patient") {
+    //   //   redirectTo = "/patient/dashboard";
+    // } else {
+    //   redirectTo = "/";
+    // }
 
-    //Delete password from existing user to send in response
-    const userSafe = userExists.toObject();
-    delete userSafe.password;
-
-    res.status(200).json({ success: true, message: "Login successful", user: userSafe, token });
+    return res
+      .status(200)
+      .json({ success: true, message: "Login successful", user: userSafe, agency, redirectTo: "/" });
   } catch (error) {
-    next(error);
+    // console.log(error);
     res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
 const me = async (req, res) => {
-  res.json({
-    success: true,
-    user: req.user,
-  });
+  try {
+    // console.log("req.user at auth/me: ", req.user);
+    res.json({
+      success: true,
+      user: req.user,
+    });
+  } catch (error) {
+    // console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 const logout = (req, res) => {
