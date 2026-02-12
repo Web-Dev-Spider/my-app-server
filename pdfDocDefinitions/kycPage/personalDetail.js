@@ -2,14 +2,14 @@ const { boxedString, boxedChars } = require("../../helperFunctions/helpers");
 
 function createPersonalDetailsSection(user) {
   let { mrMrsMs, fName, mName, lName, consumerNo, dob, fatherOrSpouseName, motherName } = { ...user };
-  console.log("personal details.js fName: ", fName);
+  // console.log("personal details.js fName: ", fName);
 
   fName = fName.toUpperCase();
   mName = mName.toUpperCase();
   lName = lName.toUpperCase();
   fatherOrSpouseName = fatherOrSpouseName.toUpperCase();
   motherName = motherName.toUpperCase();
-  console.log(fName);
+  // console.log(fName);
   let dimPersonalDet = 85;
 
   const personalDetailsSection = [

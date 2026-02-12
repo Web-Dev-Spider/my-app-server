@@ -16,7 +16,8 @@ const { formatUser } = require("../helperFunctions/helpers");
 const printer = new PdfPrinter(fonts);
 
 const createKYCPDF = (req, res) => {
-  let { user } = req.body;
+  let user = req.body;
+  // console.log(user)
 
   //   console.log("Formatted user:", formatUser(user));
   user = formatUser(user);
@@ -24,6 +25,7 @@ const createKYCPDF = (req, res) => {
   const pdfDoc = printer.createPdfKitDocument(docDefinition);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "inline; filename=consumer_details.pdf");
+
 
   pdfDoc.pipe(res);
   pdfDoc.end();

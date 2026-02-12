@@ -5,7 +5,7 @@ const styles = require("../styles/pdfDocStyles");
 const createPersonalDetailsSection = require("./personalDetail");
 const createAddressDetailsSection = require("./addressDetails");
 const buildKYCDocDef = ({ user }) => {
-  console.log("user: ", user);
+  // console.log("user: ", user);
   const personalDetailsSection = createPersonalDetailsSection(user);
   const addressDetailsSection = createAddressDetailsSection(user);
   return {

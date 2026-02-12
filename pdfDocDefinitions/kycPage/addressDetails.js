@@ -35,7 +35,7 @@ function generateAddressDetailsSection(user) {
 
   const { fonts } = require("pdfmake/build/pdfmake");
 
-  console.log("Address details for decl page", fName);
+  // console.log("Address details for decl page", fName);
   const dimAddressDet = 136;
 
   const addressDetailsSection = [
