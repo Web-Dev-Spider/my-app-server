@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 const { PORT } = require("./config/envConfig.js");
 const userRouter = require("./routes/userRouter.js");
 const authRouter = require("./routes/authRouter.js");
+const pdfRouter = require("./routes/pdfRouter.js");
 const connectDB = require("./config/db.js");
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(cookieParser());
 
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
+app.use("/pdf", pdfRouter);
 
 // app.use("/api/v1/admin");
 
