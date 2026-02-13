@@ -1,4 +1,4 @@
-const { boxedString, boxedChars } = require("../../helperFunctions/helpers");
+const { boxedString, boxedChars, convertToDDMMYYYY, convertDOBToDDMMYYYY } = require("../../helperFunctions/helpers");
 
 function createPersonalDetailsSection(user) {
   let { mrMrsMs, fName, mName, lName, consumerNo, dob, fatherOrSpouseName, motherName } = { ...user };
@@ -11,6 +11,7 @@ function createPersonalDetailsSection(user) {
   motherName = motherName.toUpperCase();
   // console.log(fName);
   let dimPersonalDet = 85;
+  let dobOrg = convertDOBToDDMMYYYY(dob)
 
   const personalDetailsSection = [
     {
@@ -55,13 +56,13 @@ function createPersonalDetailsSection(user) {
         { ...boxedChars(consumerNo), width: "auto" },
         {
           text: "c) Date of Birth *",
-          width: 95,
+          width: 100,
           // width: "auto",
-          margin: [5, 0, 0, 0],
+          margin: [15, 0, 0, 0],
           fontSize: 10,
         },
         {
-          ...boxedChars(dob),
+          ...boxedChars(dobOrg),
         },
       ],
       margin: [0, 10, 0, 0],

@@ -26,6 +26,12 @@ const register = async (req, res, next) => {
       return res.status(409).json({ success: false, message: "Agency with same email or sapcode already exists" });
     }
 
+    // Check if user email already exists to prevent partial failure
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Email is already registered to a user account." });
+    }
+
     // 3️⃣ Create Agency with hashed password
 
     const hashedPassword = await hashPassword(password);
@@ -35,7 +41,7 @@ const register = async (req, res, next) => {
 
     //if agency is created then create admin user
     if (newAgency) {
-      const username = "admin";
+      const username = `admin_${sapcode}`;
       const ALL_PERMISSIONS = Object.values(PERMISSIONS);
       const newUser = await User.create({
         agencyId: newAgency._id,
@@ -52,13 +58,13 @@ const register = async (req, res, next) => {
       if (newUser) {
         // const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
         // res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
-        res.status(201).json({ message: "Agency Added and admin created", success: true });
+        return res.status(201).json({ message: "Agency Added and admin created", success: true });
       } else {
-        res.status(500).json({ success: false, message: "Error creating user" });
+        return res.status(500).json({ success: false, message: "Error creating user" });
       }
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

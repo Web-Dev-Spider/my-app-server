@@ -10,6 +10,7 @@ const userRouter = require("./routes/userRouter.js");
 const authRouter = require("./routes/authRouter.js");
 const pdfRouter = require("./routes/pdfRouter.js");
 const connectDB = require("./config/db.js");
+const { hashPassword } = require("./utils/hashPassword.js");
 
 const app = express();
 
@@ -22,7 +23,11 @@ app.use("/auth", authRouter);
 app.use("/user", userRouter);
 app.use("/pdf", pdfRouter);
 
+
+const adminRouter = require("./routes/adminRouter.js");
+
 // app.use("/api/v1/admin");
+app.use("/admin", adminRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome to home page");

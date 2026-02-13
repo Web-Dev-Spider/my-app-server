@@ -340,6 +340,14 @@ function convertToDDMMYYYY(dateStr) {
 
   return `${day}-${month}-${year}`;
 }
+function convertDOBToDDMMYYYY(dateStr) {
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  const year = date.getFullYear();
+
+  return `${day}${month}${year}`;
+}
 
 function formatAddressSlash(...strings) {
   return strings.filter((str) => str != null && str != "").join("/");
@@ -419,4 +427,5 @@ module.exports = {
   ujjwalaRegularBoxedString,
   ujjwalaRegularBoxedChars,
   formatUser,
+  convertDOBToDDMMYYYY,
 };

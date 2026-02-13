@@ -13,6 +13,7 @@ const agencySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Profile",
     },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

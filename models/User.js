@@ -9,13 +9,13 @@ const userSchema = new mongoose.Schema({
   password: { type: String, select: false, required: [true, "Password is required"] },
   agencyId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Agency", //required:true,
-    required: [true, "Agency id is required"],
+    ref: "Agency",
+    required: false, // Changed to false, validation handled in pre-validate
   },
 
   role: {
     type: String,
-    enum: ["ADMIN", "MANAGER", "SHOWROO-STAFF", "DELIVERY-BOY-DRIVER", "DELIVERY-BOY", "MECHANIC", "GODOWN"],
+    enum: ["SUPER-ADMIN", "ADMIN", "MANAGER", "SHOWROO-STAFF", "DELIVERY-BOY-DRIVER", "DELIVERY-BOY", "MECHANIC", "GODOWN"],
     required: true,
   },
 
@@ -33,8 +33,15 @@ const userSchema = new mongoose.Schema({
   },
 });
 
+// Validate agencyId presence for non-SUPER-ADMIN roles
+userSchema.pre("validate", async function () {
+  if (this.role !== "SUPER-ADMIN" && !this.agencyId) {
+    this.invalidate("agencyId", "Agency id is required for this role");
+  }
+});
+
 userSchema.pre("save", async function () {
-  if (this.role !== "ADMIN" && this.username === "admin") {
+  if (this.role !== "ADMIN" && this.role !== "SUPER-ADMIN" && this.username === "admin") {
     throw new Error("Username 'admin' is reserved");
   }
 });
