@@ -211,8 +211,8 @@ const forgotPassword = async (req, res) => {
     await user.save();
 
     // Create reset URL
-    // Use VITE_BASE_URL from env config or fallback to localhost
-    const frontendUrl = VITE_BASE_URL || "http://localhost:5173";
+    // Use origin from request header to ensure link points to the correct frontend (local or prod)
+    const frontendUrl = req.get('origin') || VITE_BASE_URL || "http://localhost:5173";
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
