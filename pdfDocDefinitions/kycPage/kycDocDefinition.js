@@ -6,12 +6,12 @@ const createPersonalDetailsSection = require("./personalDetail");
 const createAddressDetailsSection = require("./addressDetails");
 const createNewConnectionDeclarationSection = require("../newConnectionDeclaration/newConnectionDeclation");
 const createHotPlateInspectionSection = require("../hotPlateInspection/hotPlateInspection");
-const buildKYCDocDef = ({ user, selectedPages }) => {
+const buildKYCDocDef = ({ user, selectedPages, agencyDetails }) => {
   // console.log("user: ", user);
   const personalDetailsSection = createPersonalDetailsSection(user);
   const addressDetailsSection = createAddressDetailsSection(user);
   const newConnectionDeclarationSection = createNewConnectionDeclarationSection(user);
-  const hotPlateInspectionSection = createHotPlateInspectionSection(user);
+  const hotPlateInspectionSection = createHotPlateInspectionSection(user, agencyDetails);
 
   const content = [];
   const showAll = !selectedPages || selectedPages.length === 0;

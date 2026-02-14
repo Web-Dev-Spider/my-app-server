@@ -6,7 +6,7 @@ const {
 } = require("../../helperFunctions/helpers");
 const styles = require("../styles/pdfDocStyles");
 
-function createHotPlateInspectionDefintion(user) {
+function createHotPlateInspectionDefintion(user, agencyDetails) {
     let {
         docDate,
         fName,
@@ -32,32 +32,31 @@ function createHotPlateInspectionDefintion(user) {
         .filter((item) => item)
         .join(",\n");
 
+    const agencyName = agencyDetails?.name ? agencyDetails.name.toUpperCase() : "AGENCY NAME";
+    // Format agency address. Assuming agencyDetails.address is a string or array of strings.
+    // Ideally the controller should pass pre-formatted address lines, but let's handle simple string or object.
+    // If it's the raw object from DB, we format it here.
+    let agencyAddressLines = [];
+    if (agencyDetails?.formattedAddress) {
+        agencyAddressLines = agencyDetails.formattedAddress.split('\n');
+    } else {
+        agencyAddressLines = ["Address Line 1", "Address Line 2", "City - Pincode"];
+    }
+
     const hotPlateInspectionDocDef = [
         {
-            text: "KUMILY INDANE SERVICES",
+            text: agencyName,
             fontSize: 15,
             bold: true,
             alignment: "center",
         },
-        {
-            text: "KPII, 1137A, Kollampattada",
+        ...agencyAddressLines.map((line, index) => ({
+            text: line,
             bold: true,
             alignment: "center",
             fontSize: 10,
-        },
-        {
-            text: "Kumily",
-            bold: true,
-            alignment: "center",
-            fontSize: 10,
-        },
-        {
-            text: "Idukki - 685509",
-            bold: true,
-            alignment: "center",
-            margin: [0, 0, 0, 30],
-            fontSize: 10,
-        },
+            margin: index === agencyAddressLines.length - 1 ? [0, 0, 0, 30] : [0, 0, 0, 0]
+        })),
         {
             text: "HOT PLATE INSPECTION REPORT",
             decoration: "underline",
