@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   name: { type: String },
-  email: { type: String, unique: true },
-  mobile: { type: Number },
+  email: { type: String, unique: true, sparse: true },
+  mobile: { type: String },
   user_id: { type: Number },
   username: { type: String },
   password: { type: String, select: false, required: [true, "Password is required"] },
@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ["SUPER-ADMIN", "ADMIN", "MANAGER", "SHOWROO-STAFF", "DELIVERY-BOY-DRIVER", "DELIVERY-BOY", "MECHANIC", "GODOWN"],
+    enum: ["SUPER-ADMIN", "ADMIN", "MANAGER", "SHOWROOM-STAFF", "DELIVERY-BOY-DRIVER", "DELIVERY-BOY", "MECHANIC", "GODOWN-KEEPER", "TRUCK-DRIVER"],
     required: true,
   },
 
@@ -26,12 +26,9 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
-
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  resetPasswordToken: { type: String },
+  resetPasswordExpire: { type: Date },
+}, { timestamps: true });
 
 // Validate agencyId presence for non-SUPER-ADMIN roles
 userSchema.pre("validate", async function () {

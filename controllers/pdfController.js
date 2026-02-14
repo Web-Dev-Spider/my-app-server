@@ -19,9 +19,11 @@ const createKYCPDF = (req, res) => {
   let user = req.body;
   // console.log(user)
 
+  const { selectedPages } = user;
+  console.log("Selected Pages:", selectedPages);
   //   console.log("Formatted user:", formatUser(user));
   user = formatUser(user);
-  const docDefinition = buildKYCDocDef({ user });
+  const docDefinition = buildKYCDocDef({ user, selectedPages });
   // Create dynamic filename
   const { fName, mName, lName } = req.body;
   const fileNameParts = [fName, mName, lName].filter(part => part && part.trim() !== "");

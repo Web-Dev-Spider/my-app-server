@@ -4,16 +4,16 @@ const authenticate = async (req, res, next) => {
     // const token = req.headers.authorization?.split(" ")[1];
     const token = req.cookies?.token;
     if (!token) {
-      res.status(401).json({ success: false, message: "Not Authenticated ...Access denied" });
+      return res.status(401).json({ success: false, message: "Not Authenticated ...Access denied, please reload" });
     }
 
     const decoded = verifyToken(token);
 
-    req.user = decoded; // attach the decoded token to the req.user object.
-    console.log("req.user", req.user);
+    req.user = decoded.user; // attach the correct user object from the decoded token
+    // console.log("req.user from middleware", req.user);
     next();
   } catch (error) {
-    res.status(401).json({ success: false, message: "Invalid token ...Access denied", error: error.message });
+    return res.status(401).json({ success: false, message: "Invalid token ...Access denied", error: error.message });
   }
 };
 

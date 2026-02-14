@@ -5,13 +5,44 @@ const styles = require("../styles/pdfDocStyles");
 const createPersonalDetailsSection = require("./personalDetail");
 const createAddressDetailsSection = require("./addressDetails");
 const createNewConnectionDeclarationSection = require("../newConnectionDeclaration/newConnectionDeclation");
-const buildKYCDocDef = ({ user }) => {
+const createHotPlateInspectionSection = require("../hotPlateInspection/hotPlateInspection");
+const buildKYCDocDef = ({ user, selectedPages }) => {
   // console.log("user: ", user);
   const personalDetailsSection = createPersonalDetailsSection(user);
   const addressDetailsSection = createAddressDetailsSection(user);
   const newConnectionDeclarationSection = createNewConnectionDeclarationSection(user);
+  const hotPlateInspectionSection = createHotPlateInspectionSection(user);
+
+  const content = [];
+  const showAll = !selectedPages || selectedPages.length === 0;
+
+  if (showAll || selectedPages.includes("kyc")) {
+    content.push(
+      mainHeading,
+      subHead,
+      shortText,
+      personalDetHead,
+      personalDetailsSection,
+      addressDetailsSection
+    );
+  }
+
+  if (showAll || selectedPages.includes("newConnectionDeclaration")) {
+    if (content.length > 0 && newConnectionDeclarationSection.length > 0) {
+      newConnectionDeclarationSection[0].pageBreak = "before";
+    }
+    content.push(...newConnectionDeclarationSection);
+  }
+
+  if (showAll || selectedPages.includes("hotPlateInspection")) {
+    if (content.length > 0 && hotPlateInspectionSection.length > 0) {
+      hotPlateInspectionSection[0].pageBreak = "before";
+    }
+    content.push(...hotPlateInspectionSection);
+  }
+
   return {
-    content: [mainHeading, subHead, shortText, personalDetHead, personalDetailsSection, addressDetailsSection, newConnectionDeclarationSection],
+    content: content,
     styles: styles,
   };
 };

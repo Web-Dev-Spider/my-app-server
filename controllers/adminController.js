@@ -83,8 +83,77 @@ const toggleAgencyStatus = async (req, res) => {
     }
 };
 
+const { hashPassword } = require("../utils/hashPassword");
+const ROLE_PERMISSIONS = require("../config/rolePermissions");
+
+const createUser = async (req, res) => {
+    try {
+        const { name, email, mobile, username, password, role } = req.body;
+        const agencyId = req.user.agencyId; // Assuming admin belongs to an agency
+
+        // Check if user already exists
+        const orConditions = [{ username }, { mobile }];
+        if (email) {
+            orConditions.push({ email });
+        }
+
+        const existingUser = await User.findOne({
+            $or: orConditions
+        });
+
+        if (existingUser) {
+            return res.status(409).json({ success: false, message: "User with same email, username or mobile already exists" });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        // Get default permissions based on role
+        const permissions = ROLE_PERMISSIONS[role] || [];
+
+        const newUser = await User.create({
+            name,
+            email: email || undefined, // Use undefined so mongoose sparse index ignores it if empty/null
+            mobile,
+            username,
+            password: hashedPassword,
+            role,
+            permissions,
+            agencyId,
+            createdBy: req.user._id
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            user: {
+                id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role
+            }
+        });
+
+    } catch (error) {
+        console.error("Error creating user:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const getAgencyUsers = async (req, res) => {
+    try {
+        const agencyId = req.user.agencyId;
+        const Users = await User.find({ agencyId }).select("-password").sort({ createdAt: -1 });
+        res.status(200).json({ success: true, users: Users });
+    } catch (error) {
+        console.error("Error fetching agency users:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
 module.exports = {
     getStats,
     getAllAgencies,
-    toggleAgencyStatus
+    toggleAgencyStatus,
+    createUser,
+    getAgencyUsers
 };

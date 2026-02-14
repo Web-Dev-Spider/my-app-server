@@ -289,7 +289,7 @@ function generateAddressDetailsSection(user) {
       fontSize: 8,
       alignment: "right",
       margin: [0, 5, 0, 0],
-      pageBreak: "after",
+      // pageBreak: "after",
     },
   ];
   return addressDetailsSection;
