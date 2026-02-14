@@ -1,4 +1,4 @@
-const { boxedString, boxedChars } = require("../../helperFunctions/helpers");
+const { boxedString, boxedChars, convertToDDMMYYYY } = require("../../helperFunctions/helpers");
 
 //Do not touch this code
 
@@ -32,8 +32,16 @@ function generateAddressDetailsSection(user) {
   landMark = landMark.toUpperCase();
   roadName = roadName.toUpperCase();
   cityTownVillage = cityTownVillage.toUpperCase();
+  districtName = districtName.toUpperCase();
+  stateName = stateName.toUpperCase();
+  poIcode = poIcode.toUpperCase();
+  rationCardState = rationCardState.toUpperCase();
+  docDate = convertToDDMMYYYY(docDate);
+  user.docDate = docDate;
 
-  const { fonts } = require("pdfmake/build/pdfmake");
+  // const { fonts } = require("pdfmake/build/pdfmake");
+  console.log("Pincode :  at kyc page address details", pinCode)
+  console.log('Ration card state at kyc details', rationCardState, "end")
 
   // console.log("Address details for decl page", fName);
   const dimAddressDet = 136;
@@ -187,9 +195,9 @@ function generateAddressDetailsSection(user) {
           ...boxedChars(rationCardState),
           width: "auto",
         },
-        {
-          ...boxedString(" ", 277.5),
-        },
+        // {
+        //   ...boxedString(" ", 277.5),
+        // },
       ],
     },
     {

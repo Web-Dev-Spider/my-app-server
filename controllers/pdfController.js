@@ -22,9 +22,14 @@ const createKYCPDF = (req, res) => {
   //   console.log("Formatted user:", formatUser(user));
   user = formatUser(user);
   const docDefinition = buildKYCDocDef({ user });
+  // Create dynamic filename
+  const { fName, mName, lName } = req.body;
+  const fileNameParts = [fName, mName, lName].filter(part => part && part.trim() !== "");
+  const fileName = fileNameParts.length > 0 ? `${fileNameParts.join(" ")}.pdf` : "consumer_details.pdf";
+
   const pdfDoc = printer.createPdfKitDocument(docDefinition);
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "inline; filename=consumer_details.pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
 
 
   pdfDoc.pipe(res);

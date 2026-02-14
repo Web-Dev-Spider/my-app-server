@@ -391,7 +391,7 @@ const formatUser = (user) => {
       hNo: (user.hNo || "").padEnd(4, " "),
       wardNo: (user.wardNo || "").padEnd(3, " "),
       poaCode: (user.poaCode || "").padEnd(5, " "),
-      landMark: (user.landMark || "").padEnd(18, " "),
+      landMark: (user.landMark || "").padEnd(17, " "),
       roadName: (user.roadName || "").padEnd(26, " "),
       cityTownVillage: (user.cityTownVillage || "").padEnd(16, " "),
       districtName: (user.districtName || "").padEnd(13, " ") || user.districtName.padEnd(13, " "),
@@ -399,10 +399,10 @@ const formatUser = (user) => {
       stateName: "KERALA".padEnd(10, " "),
       pinCode: (user.pinCode || "").padEnd(6, " "),
       mobNo: (user.mobNo || "").padEnd(10, " "),
-      landLineNo: (user.landLineNo || "").padEnd(10, " "),
+      landLineNo: (user.landLineNo || "").padEnd(12, " "),
       emailId: (user.emailId || "").padEnd(26, " "),
       docDate: (user.docDate || ""),
-      rationCardState: "KERALA",
+      rationCardState: (user.rationCardState || "").padEnd(26, " "),
     };
   } catch (error) {
     console.log(error);
