@@ -17,4 +17,23 @@ router.put("/user/:id", authenticate, checkRole("ADMIN"), updateUser);
 router.put("/user/:id/status", authenticate, checkRole("ADMIN"), toggleUserStatus);
 router.delete("/user/:id", authenticate, checkRole("ADMIN"), deleteUser);
 
+const {
+    createGlobalProduct,
+    getGlobalProducts,
+    updateGlobalProduct,
+    deleteGlobalProduct,
+    getCategories,
+    createCategory
+} = require("../controllers/globalProductController");
+
+// Global Product Management (Super Admin)
+router.post("/global-product", authenticate, checkRole("SUPER_ADMIN"), createGlobalProduct);
+router.get("/global-products", authenticate, checkRole("SUPER_ADMIN"), getGlobalProducts);
+router.put("/global-product/:id", authenticate, checkRole("SUPER_ADMIN"), updateGlobalProduct);
+router.delete("/global-product/:id", authenticate, checkRole("SUPER_ADMIN"), deleteGlobalProduct);
+
+// Category Management
+router.get("/product-categories", authenticate, checkRole("SUPER_ADMIN"), getCategories);
+router.post("/product-category", authenticate, checkRole("SUPER_ADMIN"), createCategory);
+
 module.exports = router;

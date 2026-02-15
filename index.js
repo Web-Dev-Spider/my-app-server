@@ -27,6 +27,9 @@ app.use("/auth", authRouter)
 app.use("/user", userRouter);
 app.use("/pdf", pdfRouter);
 
+const inventoryRouter = require("./routes/inventoryRouter.js");
+app.use("/inventory", inventoryRouter);
+
 
 const adminRouter = require("./routes/adminRouter.js");
 
