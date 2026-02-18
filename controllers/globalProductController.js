@@ -12,48 +12,53 @@ const createGlobalProduct = async (req, res) => {
             name,
             productCode,
             productType,
+            variant,
             category,
+            businessType, // Added
             capacityKg,
             isFiber,
             isReturnable,
             hsnCode,
-            taxRate
+            taxRate,
+            openingStock
         } = req.body;
 
         const newProduct = new GlobalProduct({
             name,
             productCode,
             productType,
+            variant: (productType === 'CYLINDER' || productType === 'PR' || productType === 'FTL') ? variant : undefined,
             category,
+            businessType, // Added
             capacityKg: productType === 'CYLINDER' ? capacityKg : undefined,
             isFiber,
             isReturnable: productType === 'CYLINDER', // Default logic
             hsnCode,
             taxRate,
+            openingStock: (productType === 'CYLINDER' || productType === 'PR' || productType === 'FTL') ? openingStock : 0,
             createdBy: 'SUPER_ADMIN'
         });
 
         await newProduct.save({ session });
 
-        // Auto-sync: Create AgencyProduct for all active agencies
-        const agencies = await Agency.find({ isActive: true });
-        const agencyProducts = agencies.map(agency => ({
-            agencyId: agency._id,
-            globalProductId: newProduct._id,
-            localName: newProduct.name,
-            currentPurchasePrice: 0,
-            currentSalePrice: 0,
-            priceEffectiveDate: new Date(),
-            isActive: true
-        }));
-
-        if (agencyProducts.length > 0) {
-            await AgencyProduct.insertMany(agencyProducts, { session });
-        }
+        // Auto-sync disabled as per user request (they want manually add products to set opening stock)
+        // const agencies = await Agency.find({ isActive: true });
+        // const agencyProducts = agencies.map(agency => ({
+        //     agencyId: agency._id,
+        //     globalProductId: newProduct._id,
+        //     localName: newProduct.name,
+        //     currentPurchasePrice: 0,
+        //     currentSalePrice: 0,
+        //     priceEffectiveDate: new Date(),
+        //     isActive: true
+        // }));
+        // if (agencyProducts.length > 0) {
+        //     await AgencyProduct.insertMany(agencyProducts, { session });
+        // }
 
         await session.commitTransaction();
         session.endSession();
-        res.status(201).json({ success: true, message: "Global Product created and synced to all agencies", product: newProduct });
+        res.status(201).json({ success: true, message: "Global Product created", product: newProduct });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -142,11 +147,71 @@ const createCategory = async (req, res) => {
     }
 };
 
+const updateCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, type, description } = req.body;
+
+        const category = await ProductCategory.findByIdAndUpdate(
+            id,
+            { name, type, description },
+            { new: true, runValidators: true }
+        );
+
+        if (!category) {
+            return res.status(404).json({ success: false, message: "Category not found" });
+        }
+
+        res.status(200).json({ success: true, message: "Category updated", category });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const deleteCategory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Soft delete by deactivating
+        const category = await ProductCategory.findByIdAndUpdate(
+            id,
+            { isActive: false },
+            { new: true }
+        );
+
+        if (!category) {
+            return res.status(404).json({ success: false, message: "Category not found" });
+        }
+
+        res.status(200).json({ success: true, message: "Category deactivated" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+// Get schema configuration (product types, variants) from the schema itself
+const getProductSchemaConfig = async (req, res) => {
+    try {
+        const productTypes = GlobalProduct.schema.path('productType').enumValues;
+        const variants = GlobalProduct.schema.path('variant').enumValues;
+
+        res.status(200).json({
+            success: true,
+            productTypes,
+            variants
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createGlobalProduct,
     getGlobalProducts,
     updateGlobalProduct,
     deleteGlobalProduct,
     getCategories,
-    createCategory
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    getProductSchemaConfig
 };

@@ -23,7 +23,10 @@ const {
     updateGlobalProduct,
     deleteGlobalProduct,
     getCategories,
-    createCategory
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    getProductSchemaConfig
 } = require("../controllers/globalProductController");
 
 // Global Product Management (Super Admin)
@@ -35,5 +38,10 @@ router.delete("/global-product/:id", authenticate, checkRole("SUPER_ADMIN"), del
 // Category Management
 router.get("/product-categories", authenticate, checkRole("SUPER_ADMIN"), getCategories);
 router.post("/product-category", authenticate, checkRole("SUPER_ADMIN"), createCategory);
+router.put("/product-category/:id", authenticate, checkRole("SUPER_ADMIN"), updateCategory);
+router.delete("/product-category/:id", authenticate, checkRole("SUPER_ADMIN"), deleteCategory);
+
+// Schema Config (product types, variants from schema)
+router.get("/product-schema-config", authenticate, checkRole("SUPER_ADMIN"), getProductSchemaConfig);
 
 module.exports = router;

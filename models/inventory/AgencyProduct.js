@@ -12,17 +12,64 @@ const agencyProductSchema = new mongoose.Schema(
             ref: "GlobalProduct",
             required: true
         },
-        localName: { type: String }, // Optional, agency can rename locally
-        currentPurchasePrice: { type: Number, default: 0 },
-        currentSalePrice: { type: Number, default: 0 },
-        priceEffectiveDate: { type: Date },
-        openingStockConfig: { type: String }, // Placeholder for future use
+        localName: { type: String }, // Optional renaming
+        prodCode: { type: String, required: true },
+        // Configuration / Pricing (Current prevailing rates)
+        purchasePrice: { type: Number, default: 0 }, // Purchase/Deposit Price
+        currentSalePrice: { type: Number, default: 0 }, // Selling Price (if applicable)
+        priceEffectiveDate: { type: Date, default: Date.now },
+
+        // LIVE STOCK INVENTORY (Updated by Transactions)
+        stock: {
+            // CYLINDER (ValuationType: DEPOSIT / FTL)
+            filled: { type: Number, default: 0 },
+            empty: { type: Number, default: 0 },
+            defective: { type: Number, default: 0 },
+
+            // PR (ValuationType: DEPOSIT)
+            sound: { type: Number, default: 0 },
+            defectivePR: { type: Number, default: 0 },
+
+            // NFR / FTL PR (ValuationType: FTL / NFR) - quantity only
+            quantity: { type: Number, default: 0 }
+        },
+
+        // OPENING STOCK RECORD (Immutable History of Initial State)
+        openingStock: {
+            // CYLINDER (Deposit / FTL)
+            filled: {
+                quantity: { type: Number, default: 0 },
+                price: { type: Number, default: 0 },       // Valuation/Deposit per unit
+                sellingPrice: { type: Number, default: 0 }, // Current Refill Rate
+                effectiveDate: { type: Date }
+            },
+            empty: {
+                quantity: { type: Number, default: 0 }
+            },
+            defective: {
+                quantity: { type: Number, default: 0 },
+                price: { type: Number, default: 0 }        // Recoverable amount if any
+            },
+
+            // PR (Deposit)
+            sound: {
+                quantity: { type: Number, default: 0 },
+                price: { type: Number, default: 0 }        // Deposit
+            },
+            defectivePR: {
+                quantity: { type: Number, default: 0 }
+            },
+
+            // NFR / FTL PR (ValuationType: NFR / FTL)
+            simple: {
+                quantity: { type: Number, default: 0 },
+                purchasePrice: { type: Number, default: 0 },
+                sellingPrice: { type: Number, default: 0 },
+                effectiveDate: { type: Date }
+            }
+        },
+
         isEnabled: { type: Boolean, default: true },
-        // Opening Stock (One-time entry)
-        openingStockFilled: { type: Number, default: 0 },
-        openingStockEmpty: { type: Number, default: 0 },
-        openingStockDefective: { type: Number, default: 0 },
-        // ... (other agency specific settings can go here)
     },
     { timestamps: true }
 );

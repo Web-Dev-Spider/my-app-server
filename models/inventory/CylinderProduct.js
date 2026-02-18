@@ -29,15 +29,15 @@ const cylinderProductSchema = new mongoose.Schema(
             ref: "Agency",
         },
         isActive: { type: Boolean, default: true },
-        // Opening Stock (One-time entry or reference)
-        openingStockFilled: { type: Number, default: 0 },
-        openingStockEmpty: { type: Number, default: 0 },
-        openingStockDefective: { type: Number, default: 0 },
+        // Opening Stock for this variant
+        openingStock: { type: Number, default: 0 },
+        currentStock: { type: Number, default: 0 }, // Updated via transactions or stock movements
     },
     { timestamps: true }
 );
 
 // Compound index for local uniqueness within agency
+// Each combination of agencyId + productCode + variant is unique
 cylinderProductSchema.index({ agencyId: 1, productCode: 1, variant: 1 }, { unique: true });
 
 module.exports = mongoose.model("CylinderProduct", cylinderProductSchema);

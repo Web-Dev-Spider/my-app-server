@@ -217,19 +217,39 @@ const deleteProduct = async (req, res) => {
 const getUnmappedGlobalProducts = async (req, res) => {
     try {
         const agencyId = req.user.agencyId;
+        console.log(`[getUnmappedGlobalProducts] Fetching for agency: ${agencyId}`);
 
-        // Get IDs of global products already mapped
-        const mappedProducts = await AgencyProduct.find({ agencyId }).select('globalProductId');
-        const mappedProductIds = mappedProducts.map(p => p.globalProductId.toString());
+        // 1. Get all AgencyProducts (mapped global products)
+        // Use lean() for performance
+        const agencyProducts = await AgencyProduct.find({ agencyId }).select('globalProductId').lean();
 
-        // Find global products NOT in the mapped list
+        const mappedGlobalIds = agencyProducts
+            .map(p => p.globalProductId ? p.globalProductId.toString() : null)
+            .filter(Boolean);
+
+        console.log(`[getUnmappedGlobalProducts] Found ${mappedGlobalIds.length} mapped products.`);
+
+        // DEBUG: Check totals
+        const totalGlobal = await GlobalProduct.countDocuments({});
+        const totalActive = await GlobalProduct.countDocuments({ isActive: true });
+        console.log(`[getUnmappedGlobalProducts] DEBUG: Total Global: ${totalGlobal}, Total Active: ${totalActive}`);
+
+        // 2. Find global products NOT in the mapped list
+        // Use limit to prevent timeouts if list is huge
         const unmappedProducts = await GlobalProduct.find({
-            _id: { $nin: mappedProductIds },
+            _id: { $nin: mappedGlobalIds },
             isActive: true
-        }).sort({ name: 1 });
+        })
+            .select('name productCode productType variant category capacityKg businessType') // Select only essential fields + businessType
+            .sort({ name: 1 })
+            .limit(500) // Increase limit reasonably, but keep it safe
+            .lean();
+
+        console.log(`[getUnmappedGlobalProducts] Returning ${unmappedProducts.length} unmapped products.`);
 
         res.status(200).json({ success: true, products: unmappedProducts });
     } catch (error) {
+        console.error("[getUnmappedGlobalProducts] Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -237,34 +257,81 @@ const getUnmappedGlobalProducts = async (req, res) => {
 // Map a Global Product to the Agency
 const mapGlobalProduct = async (req, res) => {
     try {
-        const { globalProductId, currentPurchasedPrice, currentSalePrice, openingStockFilled, openingStockEmpty, openingStockDefective } = req.body;
+        const {
+            globalProductId,
+            currentPurchasePrice, // Corrected from currentPurchasedPrice
+            currentSalePrice,
+            openingStockFilled,
+            openingStockEmpty,
+            openingStockDefective
+        } = req.body;
+
         const agencyId = req.user.agencyId;
 
         // Verify Global Product exists
         const globalProduct = await GlobalProduct.findById(globalProductId);
         if (!globalProduct) return res.status(404).json({ success: false, message: "Global product not found" });
 
-        // Check if already mapped (double check)
+        // Check if already mapped
         const existingMapping = await AgencyProduct.findOne({ agencyId, globalProductId });
         if (existingMapping) return res.status(409).json({ success: false, message: "Product already added to agency" });
+
+        // Prepare Opening Stock Object based on product type
+        let openingStockData = {};
+        let stockData = {};
+
+        if (globalProduct.productType === 'CYLINDER') {
+            // Cylinders have detailed opening stock
+            openingStockData = {
+                filled: { quantity: Number(openingStockFilled) || 0, price: Number(currentPurchasePrice) || 0 },
+                empty: { quantity: Number(openingStockEmpty) || 0 },
+                defective: { quantity: Number(openingStockDefective) || 0 }
+            };
+            // Initial Live Stock matches Opening Stock
+            stockData = {
+                filled: Number(openingStockFilled) || 0,
+                empty: Number(openingStockEmpty) || 0,
+                defective: Number(openingStockDefective) || 0
+            };
+        } else if (globalProduct.productType === 'PR') {
+            // PRs have sound/defective
+            // reuse filled/defective inputs for sound/defective for simplicity in mapping UI, or check variant
+            // If variant is 'Sound PR', we map filled input to sound.
+            if (globalProduct.variant === 'Sound PR') {
+                openingStockData = { sound: { quantity: Number(openingStockFilled) || 0 } };
+                stockData = { sound: Number(openingStockFilled) || 0 };
+            } else if (globalProduct.variant === 'Defective PR') {
+                openingStockData = { defectivePR: { quantity: Number(openingStockFilled) || 0 } };
+                stockData = { defectivePR: Number(openingStockFilled) || 0 };
+            }
+        } else {
+            // NFR / FTL items (quantity only)
+            openingStockData = { simple: { quantity: Number(openingStockFilled) || 0, purchasePrice: Number(currentPurchasePrice) || 0, sellingPrice: Number(currentSalePrice) || 0 } };
+            stockData = { quantity: Number(openingStockFilled) || 0 };
+        }
 
         // Create Mapping
         const newMapping = new AgencyProduct({
             agencyId,
             globalProductId,
-            localName: globalProduct.name, // Default to global name
-            currentPurchasePrice: currentPurchasedPrice || 0,
-            currentSalePrice: currentSalePrice || 0,
+            localName: globalProduct.name,
+            purchasePrice: Number(currentPurchasePrice) || 0, // Mapped to purchasePrice
+            currentSalePrice: Number(currentSalePrice) || 0,
             isEnabled: true,
-            openingStockFilled: openingStockFilled || 0,
-            openingStockEmpty: openingStockEmpty || 0,
-            openingStockDefective: openingStockDefective || 0,
+            openingStock: openingStockData,
+            stock: stockData // Initialize live stock
         });
 
         await newMapping.save();
 
+        // Also create an OPENING_STOCK transaction? 
+        // Ideally yes, but for now we just set the initial state. 
+        // The user can create transactions later or we can auto-create here.
+        // Let's keep it simple for now as requested.
+
         res.status(201).json({ success: true, message: "Product added to agency inventory", product: newMapping });
     } catch (error) {
+        console.error("Map Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
