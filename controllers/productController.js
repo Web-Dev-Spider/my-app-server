@@ -80,19 +80,25 @@ const getProducts = async (req, res) => {
                 return {
                     _id: ap._id,
                     type: mappedType,
+                    productType: gp.productType,
                     name: ap.localName || gp.name,
                     productCode: gp.productCode,
+                    itemCode: ap.itemCode,
                     capacityKg: gp.capacityKg,
                     category: gp.category,
-                    unit: 'NOS', // GlobalProduct schema missing unit, default
+                    subcategory: gp.subcategory,
+                    valuationType: gp.valuationType,
+                    unit: gp.unit || 'NOS',
                     hsnCode: gp.hsnCode,
                     taxRate: gp.taxRate,
-                    currentPurchasePrice: ap.currentPurchasePrice,
+                    currentPurchasePrice: ap.purchasePrice,
                     currentSalePrice: ap.currentSalePrice,
-                    isActive: ap.isEnabled,
                     priceEffectiveDate: ap.priceEffectiveDate,
+                    isActive: ap.isEnabled,
                     isGlobal: true,
-                    isFiber: gp.isFiber
+                    isFiber: gp.isFiber,
+                    isReturnable: gp.isReturnable,
+                    stock: ap.stock
                 };
             }).filter(p => p !== null && (!type || p.type === type || (type === 'nfr' && p.type === 'item'))); // Allow item/nfr mapping if strictly needed or just precise match
         };
@@ -259,11 +265,17 @@ const mapGlobalProduct = async (req, res) => {
     try {
         const {
             globalProductId,
-            currentPurchasePrice, // Corrected from currentPurchasedPrice
+            currentPurchasePrice,
             currentSalePrice,
             openingStockFilled,
             openingStockEmpty,
-            openingStockDefective
+            openingStockDefective,
+            openingStockSound,
+            openingStockDefectivePR,
+            // NFR-specific fields from frontend
+            localName,
+            itemCode,
+            priceEffectiveDate
         } = req.body;
 
         const agencyId = req.user.agencyId;
@@ -295,15 +307,14 @@ const mapGlobalProduct = async (req, res) => {
             };
         } else if (globalProduct.productType === 'PR') {
             // PRs have sound/defective
-            // reuse filled/defective inputs for sound/defective for simplicity in mapping UI, or check variant
-            // If variant is 'Sound PR', we map filled input to sound.
-            if (globalProduct.variant === 'Sound PR') {
-                openingStockData = { sound: { quantity: Number(openingStockFilled) || 0 } };
-                stockData = { sound: Number(openingStockFilled) || 0 };
-            } else if (globalProduct.variant === 'Defective PR') {
-                openingStockData = { defectivePR: { quantity: Number(openingStockFilled) || 0 } };
-                stockData = { defectivePR: Number(openingStockFilled) || 0 };
-            }
+            openingStockData = {
+                sound: { quantity: Number(openingStockSound) || 0, price: Number(currentPurchasePrice) || 0 },
+                defectivePR: { quantity: Number(openingStockDefectivePR) || 0 }
+            };
+            stockData = {
+                sound: Number(openingStockSound) || 0,
+                defectivePR: Number(openingStockDefectivePR) || 0
+            };
         } else {
             // NFR / FTL items (quantity only)
             openingStockData = { simple: { quantity: Number(openingStockFilled) || 0, purchasePrice: Number(currentPurchasePrice) || 0, sellingPrice: Number(currentSalePrice) || 0 } };
@@ -314,12 +325,21 @@ const mapGlobalProduct = async (req, res) => {
         const newMapping = new AgencyProduct({
             agencyId,
             globalProductId,
-            localName: globalProduct.name,
-            purchasePrice: Number(currentPurchasePrice) || 0, // Mapped to purchasePrice
+            itemCode: itemCode || globalProduct.productCode,
+            localName: localName || globalProduct.name,
+            purchasePrice: Number(currentPurchasePrice) || 0,
             currentSalePrice: Number(currentSalePrice) || 0,
+            priceEffectiveDate: priceEffectiveDate || new Date(),
             isEnabled: true,
             openingStock: openingStockData,
-            stock: stockData // Initialize live stock
+            stock: {
+                filled: stockData.filled || 0,
+                empty: stockData.empty || 0,
+                defective: stockData.defective || 0,
+                sound: stockData.sound || 0,
+                defectivePR: stockData.defectivePR || 0,
+                quantity: stockData.quantity || 0
+            }
         });
 
         await newMapping.save();

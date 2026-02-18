@@ -6,12 +6,20 @@ const globalProductSchema = new mongoose.Schema(
 
         productCode: { type: String, required: true },
 
-        category: {
+        productType: {
             type: String,
             enum: ["CYLINDER", "PR", "NFR"],
             required: true,
-        }, valuationType:
-        {
+        },
+        category: {
+            type: String,
+            enum: ["Domestic", "Commercial", "NFR", "FTL"],
+            required: true,
+        },
+        subcategory: {
+            type: String, // NFR subcategory like "Suraksha Hose", "LPG Stove", "Fire Ball", etc.
+        },
+        valuationType: {
             type: String,
             enum: ["DEPOSIT", "VALUATED", "NFR"],
             required: true,

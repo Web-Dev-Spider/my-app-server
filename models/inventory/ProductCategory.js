@@ -5,7 +5,7 @@ const productCategorySchema = new mongoose.Schema(
         name: { type: String, required: true, unique: true },
         type: {
             type: String,
-            enum: ["CYLINDER", "NFR", "FTL", "PR"],
+            enum: ["CYLINDER", "NFR", "PR"],
             required: true
         },
         description: { type: String },

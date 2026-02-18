@@ -13,7 +13,7 @@ const agencyProductSchema = new mongoose.Schema(
             required: true
         },
         localName: { type: String }, // Optional renaming
-        prodCode: { type: String, required: true },
+        itemCode: { type: String, required: true },
         // Configuration / Pricing (Current prevailing rates)
         purchasePrice: { type: Number, default: 0 }, // Purchase/Deposit Price
         currentSalePrice: { type: Number, default: 0 }, // Selling Price (if applicable)

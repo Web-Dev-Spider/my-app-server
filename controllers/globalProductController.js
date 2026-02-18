@@ -11,50 +11,35 @@ const createGlobalProduct = async (req, res) => {
         const {
             name,
             productCode,
-            productType,
-            variant,
-            category,
-            businessType, // Added
+            productType,   // CYLINDER, PR, NFR
+            category,      // Domestic, Commercial, NFR, FTL
+            subcategory,   // NFR subcategory (e.g., Suraksha Hose, LPG Stove)
+            valuationType, // DEPOSIT, VALUATED, NFR
             capacityKg,
             isFiber,
             isReturnable,
             hsnCode,
             taxRate,
-            openingStock
+            unit
         } = req.body;
 
         const newProduct = new GlobalProduct({
             name,
             productCode,
             productType,
-            variant: (productType === 'CYLINDER' || productType === 'PR' || productType === 'FTL') ? variant : undefined,
             category,
-            businessType, // Added
-            capacityKg: productType === 'CYLINDER' ? capacityKg : undefined,
-            isFiber,
-            isReturnable: productType === 'CYLINDER', // Default logic
+            subcategory: (productType === 'NFR') ? subcategory : undefined,
+            valuationType,
+            capacityKg: (productType === 'CYLINDER') ? capacityKg : undefined,
+            isFiber: isFiber || false,
+            isReturnable: isReturnable || false,
             hsnCode,
             taxRate,
-            openingStock: (productType === 'CYLINDER' || productType === 'PR' || productType === 'FTL') ? openingStock : 0,
+            unit: unit || 'NOS',
             createdBy: 'SUPER_ADMIN'
         });
 
         await newProduct.save({ session });
-
-        // Auto-sync disabled as per user request (they want manually add products to set opening stock)
-        // const agencies = await Agency.find({ isActive: true });
-        // const agencyProducts = agencies.map(agency => ({
-        //     agencyId: agency._id,
-        //     globalProductId: newProduct._id,
-        //     localName: newProduct.name,
-        //     currentPurchasePrice: 0,
-        //     currentSalePrice: 0,
-        //     priceEffectiveDate: new Date(),
-        //     isActive: true
-        // }));
-        // if (agencyProducts.length > 0) {
-        //     await AgencyProduct.insertMany(agencyProducts, { session });
-        // }
 
         await session.commitTransaction();
         session.endSession();
@@ -62,6 +47,7 @@ const createGlobalProduct = async (req, res) => {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
+        console.error("Create Product Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -70,7 +56,17 @@ const createGlobalProduct = async (req, res) => {
 const getGlobalProducts = async (req, res) => {
     try {
         const products = await GlobalProduct.find().sort({ createdAt: -1 });
-        res.status(200).json({ success: true, products });
+
+        // productType now exists natively in schema, just add businessType alias for FE
+        const mappedProducts = products.map(p => {
+            const obj = p.toObject();
+            return {
+                ...obj,
+                businessType: obj.valuationType // Alias for UI
+            };
+        });
+
+        res.status(200).json({ success: true, products: mappedProducts });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -120,12 +116,20 @@ const ProductCategory = require("../models/inventory/ProductCategory");
 const getCategories = async (req, res) => {
     try {
         const { type } = req.query;
+        // Build query object. Always include isActive: true.
         const query = { isActive: true };
-        if (type) query.type = type;
+
+        // ProductType in UI maps to 'type' in ProductCategory schema
+        if (type) {
+            query.type = type;
+        }
+
+        // console.log("Fetching categories with query:", query); // Debug
 
         const categories = await ProductCategory.find(query).sort({ name: 1 });
         res.status(200).json({ success: true, categories });
     } catch (error) {
+        console.error("Get Categories Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -188,16 +192,16 @@ const deleteCategory = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-// Get schema configuration (product types, variants) from the schema itself
+// Get schema configuration (product types, categories) from the schema itself
 const getProductSchemaConfig = async (req, res) => {
     try {
         const productTypes = GlobalProduct.schema.path('productType').enumValues;
-        const variants = GlobalProduct.schema.path('variant').enumValues;
+        const categories = GlobalProduct.schema.path('category').enumValues;
 
         res.status(200).json({
             success: true,
             productTypes,
-            variants
+            categories
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
