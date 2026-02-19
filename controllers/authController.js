@@ -119,7 +119,7 @@ const login = async (req, res, next) => {
 
     return res
       .status(200)
-      .json({ success: true, message: "Login successful", user: userSafe, agency, redirectTo: "/" });
+      .json({ success: true, message: "Login successful", user: userSafe, agency, redirectTo: "/home" });
   } catch (error) {
     // console.log(error);
     res.status(500).json({ success: false, message: error.message });
