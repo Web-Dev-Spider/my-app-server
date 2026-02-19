@@ -5,7 +5,7 @@ const {
     formatAddressSlash,
     convertToDDMMYYYY,
 } = require('../../helperFunctions/helpers');
-function ncDeclaration(user) {
+function ncDeclaration(user, agencyDetails) {
 
     let {
         fatherOrSpouseName,
@@ -55,6 +55,8 @@ function ncDeclaration(user) {
         pinCode
     );
     dob = convertToDDMMYYYY(dob);
+
+    const agencyName = agencyDetails?.name ? agencyDetails.name.toUpperCase() : "AGENCY NAME";
     const ncDocDefinition = [
         //main sub heading
         {
@@ -258,7 +260,7 @@ function ncDeclaration(user) {
                     [
                         { text: "9", style: { alignment: "right" }, margin: [0, 4, 0, 4] },
                         {
-                            text: `That whenever I change my residence from present address to another, I will inform M/s Kumily Indane Services (Name of the LPG distributor) in writing in advance for change of address in the records.`,
+                            text: `That whenever I change my residence from present address to another, I will inform M/s ${agencyName} (Name of the LPG distributor) in writing in advance for change of address in the records.`,
                             fontSize: 10,
                             alignment: "justify",
                             lineHeight: 1.1,

@@ -223,7 +223,7 @@ const deleteProduct = async (req, res) => {
 const getUnmappedGlobalProducts = async (req, res) => {
     try {
         const agencyId = req.user.agencyId;
-        console.log(`[getUnmappedGlobalProducts] Fetching for agency: ${agencyId}`);
+        // console.log(`[getUnmappedGlobalProducts] Fetching for agency: ${agencyId}`);
 
         // 1. Get all AgencyProducts (mapped global products)
         // Use lean() for performance
@@ -233,12 +233,12 @@ const getUnmappedGlobalProducts = async (req, res) => {
             .map(p => p.globalProductId ? p.globalProductId.toString() : null)
             .filter(Boolean);
 
-        console.log(`[getUnmappedGlobalProducts] Found ${mappedGlobalIds.length} mapped products.`);
+        // console.log(`[getUnmappedGlobalProducts] Found ${mappedGlobalIds.length} mapped products.`);
 
         // DEBUG: Check totals
         const totalGlobal = await GlobalProduct.countDocuments({});
         const totalActive = await GlobalProduct.countDocuments({ isActive: true });
-        console.log(`[getUnmappedGlobalProducts] DEBUG: Total Global: ${totalGlobal}, Total Active: ${totalActive}`);
+        // console.log(`[getUnmappedGlobalProducts] DEBUG: Total Global: ${totalGlobal}, Total Active: ${totalActive}`);
 
         // 2. Find global products NOT in the mapped list
         // Use limit to prevent timeouts if list is huge
@@ -251,7 +251,7 @@ const getUnmappedGlobalProducts = async (req, res) => {
             .limit(500) // Increase limit reasonably, but keep it safe
             .lean();
 
-        console.log(`[getUnmappedGlobalProducts] Returning ${unmappedProducts.length} unmapped products.`);
+        // console.log(`[getUnmappedGlobalProducts] Returning ${unmappedProducts.length} unmapped products.`);
 
         res.status(200).json({ success: true, products: unmappedProducts });
     } catch (error) {

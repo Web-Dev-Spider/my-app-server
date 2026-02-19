@@ -10,7 +10,7 @@ const buildKYCDocDef = ({ user, selectedPages, agencyDetails }) => {
   // console.log("user: ", user);
   const personalDetailsSection = createPersonalDetailsSection(user);
   const addressDetailsSection = createAddressDetailsSection(user);
-  const newConnectionDeclarationSection = createNewConnectionDeclarationSection(user);
+  const newConnectionDeclarationSection = createNewConnectionDeclarationSection(user, agencyDetails);
   const hotPlateInspectionSection = createHotPlateInspectionSection(user, agencyDetails);
 
   const content = [];

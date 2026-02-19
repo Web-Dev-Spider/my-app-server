@@ -73,6 +73,7 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
+    // console.log(identifier, password);
 
     // console.log(req.body);
     if (!identifier || !password) {
@@ -108,22 +109,13 @@ const login = async (req, res, next) => {
 
     //generate token
     const token = generateJwtToken({ user: userSafe, role: userExists.role, agency });
+    const isProduction = NODE_ENV === "production";
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction, // secure only in production
+      sameSite: isProduction ? "none" : "lax", // none for cross-site (prod), lax for local
       maxAge: 24 * 60 * 60 * 1000,
     });
-    // console.log("Token generated", token);
-    // if (userExists.role === "admin") {
-    //   redirectTo = "/admin/dashboard";
-    //   // } else if ((userExists.role = "doctor")) {
-    //   //   redirectTo = "/doctor/dashboard";
-    //   // } else if (userExists.role === "patient") {
-    //   //   redirectTo = "/patient/dashboard";
-    // } else {
-    //   redirectTo = "/";
-    // }
 
     return res
       .status(200)
@@ -227,7 +219,7 @@ const forgotPassword = async (req, res) => {
 
       res.status(200).json({ success: true, message: `Email sent to ${user.email}` });
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save();

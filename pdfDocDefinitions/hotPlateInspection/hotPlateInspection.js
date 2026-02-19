@@ -5,6 +5,7 @@ const {
     capitalizeWords,
 } = require("../../helperFunctions/helpers");
 const styles = require("../styles/pdfDocStyles");
+let mechanicName = "";
 
 function createHotPlateInspectionDefintion(user, agencyDetails) {
     let {
@@ -37,6 +38,7 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
     // Ideally the controller should pass pre-formatted address lines, but let's handle simple string or object.
     // If it's the raw object from DB, we format it here.
     let agencyAddressLines = [];
+    // console.log("agencyDetails: ", agencyDetails);
     if (agencyDetails?.formattedAddress) {
         agencyAddressLines = agencyDetails.formattedAddress.split('\n');
     } else {
@@ -73,7 +75,7 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
             ],
             margin: [0, 0, 0, 20],
             alignment: "justify",
-            fontSize: 10,
+            fontSize: 11,
         },
 
         // Name and address
@@ -83,15 +85,15 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
             table: {
                 widths: [60, "*"],
                 body: [
-                    [{ text: "Name", fontSize: 10 }, { text: `${custName}`, fontSize: 10 }],
+                    [{ text: "Name", fontSize: 11 }, { text: `${custName}`, fontSize: 11 }],
                     [
-                        { text: "Address", fontSize: 10 },
+                        { text: "Address", fontSize: 11 },
                         {
                             text: `${address}`,
-                            fontSize: 10,
+                            fontSize: 11,
                         },
                     ],
-                    [{ text: "Mobile NO:", fontSize: 10 }, { text: `${mobNo}`, fontSize: 10 }],
+                    [{ text: "Mobile NO:", fontSize: 11 }, { text: `${mobNo}`, fontSize: 11 }],
                 ],
             },
         },
@@ -113,12 +115,12 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
                             alignment: "center",
                             colSpan: 2,
                             margin: [0, 5],
-                            fontSize: 10,
+                            fontSize: 11,
                         },
                         {},
                     ],
-                    [{ text: "MAKE", alignment: "center", margin: [0, 5], fontSize: 10 }, " "],
-                    [{ text: "BATCH NO", alignment: "center", margin: [0, 5], fontSize: 10 }, ""],
+                    [{ text: "MAKE", alignment: "center", margin: [0, 5], fontSize: 11 }, " "],
+                    [{ text: "BATCH NO", alignment: "center", margin: [0, 5], fontSize: 11 }, ""],
                 ],
             },
         },
@@ -136,22 +138,22 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
                             alignment: "center",
                             colSpan: 4,
                             margin: [0, 5],
-                            fontSize: 10,
+                            fontSize: 11,
                         },
                         {},
                         {},
                         {},
                     ],
                     [
-                        { text: "IOC", alignment: "center", fontSize: 10 },
-                        { text: "BPC", alignment: "center", fontSize: 10 },
-                        { text: "HPC", alignment: "center", fontSize: 10 },
-                        { text: "Others", alignment: "center", fontSize: 10 },
+                        { text: "IOC", alignment: "center", fontSize: 11 },
+                        { text: "BPC", alignment: "center", fontSize: 11 },
+                        { text: "HPC", alignment: "center", fontSize: 11 },
+                        { text: "Others", alignment: "center", fontSize: 11 },
                     ],
                     [
-                        { text: "Cylinders SR Nos: ", colSpan: 2, margin: [0, 5], fontSize: 10 },
+                        { text: "Cylinders SR Nos: ", colSpan: 2, margin: [0, 5], fontSize: 11 },
                         {},
-                        { text: "PR Serial No: ", colSpan: 2, margin: [0, 5], fontSize: 10 },
+                        { text: "PR Serial No: ", colSpan: 2, margin: [0, 5], fontSize: 11 },
                         {},
                     ],
                 ],
@@ -162,16 +164,16 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
         {
             margin: [0, 10],
             text: "I hereby declare that whatever has been stated above is true to the best of my knowledge, correct and nothing is concealed there from.",
-            fontSize: 10,
+            fontSize: 11,
         },
         //Mechanic Name
         {
             margin: [0, 10],
-            text: "Mechanic Name:    Vishak",
-            fontSize: 10,
+            text: `Mechanic Name: ${mechanicName}`,
+            fontSize: 11,
         },
         `\n`,
-        { text: "Signature of Mechanic: ", fontSize: 10 },
+        { text: "Signature of Mechanic: ", fontSize: 11 },
         "\n\n",
         // Signature
 
@@ -183,23 +185,23 @@ function createHotPlateInspectionDefintion(user, agencyDetails) {
                 heights: 20,
                 body: [
                     [
-                        { text: "Place: ", fontSize: 10 },
-                        { text: `${cityTownVillage}`, fontSize: 10 },
+                        { text: "Place: ", fontSize: 11 },
+                        { text: `${cityTownVillage}`, fontSize: 11 },
                         {},
                         {
                             text: "Signature of the Customer",
                             alignment: "center",
-                            fontSize: 10,
+                            fontSize: 11,
                         },
                     ],
                     [
-                        { text: "Date: ", fontSize: 10 },
-                        { text: `${docDate}`, fontSize: 10 },
+                        { text: "Date: ", fontSize: 11 },
+                        { text: `${docDate}`, fontSize: 11 },
                         {},
                         {
                             text: `${custName}`,
                             alignment: "center",
-                            fontSize: 10,
+                            fontSize: 11,
                         },
                     ],
                 ],

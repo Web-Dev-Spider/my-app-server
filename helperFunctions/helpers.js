@@ -371,7 +371,19 @@ function capitalizeAddress(str) {
     .join("\n"); // Join lines back with newlines
 }
 
+const calculateAge = (dob) => {
+  const today = new Date();
+  const birthDate = new Date(dob);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const month = today.getMonth() - birthDate.getMonth();
+  if (month < 0 || (month === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 const formatUser = (user) => {
+  const age = calculateAge(user.dob);
   try {
     return {
       mrMrsMs: user.mrMrsMs.padEnd(3, " ") || "MR",
@@ -391,7 +403,7 @@ const formatUser = (user) => {
       hNo: (user.hNo || "").padEnd(4, " "),
       wardNo: (user.wardNo || "").padEnd(3, " "),
       poaCode: (user.poaCode || "").padEnd(5, " "),
-      landMark: (user.landMark || "").padEnd(17, " "),
+      landMark: (user.landMark || "").padEnd(18, " "),
       roadName: (user.roadName || "").padEnd(26, " "),
       cityTownVillage: (user.cityTownVillage || "").padEnd(16, " "),
       districtName: (user.districtName || "").padEnd(13, " ") || user.districtName.padEnd(13, " "),
@@ -403,10 +415,33 @@ const formatUser = (user) => {
       emailId: (user.emailId || "").padEnd(26, " "),
       docDate: (user.docDate || ""),
       rationCardState: (user.rationCardState || "").padEnd(26, " "),
+      age: age,
     };
   } catch (error) {
     console.log(error);
   }
+};
+
+const formatAgencyAddress = (address) => {
+  const { buildingNo, place, street, city, district, pincode, landmark } = address || {};
+
+  let formattedAddress = "";
+  if (buildingNo || street) formattedAddress += [buildingNo, street].filter(Boolean).join(", ");
+  if (place) formattedAddress += (formattedAddress ? ", " : "") + place; // Add to existing line or start new?
+  // Let's create lines for the PDF
+  const lines = [];
+  const line1 = [buildingNo, street].filter(Boolean).join(", ");
+  if (line1) lines.push(line1);
+  let line2 = "";
+  if (place === city) {
+    line2 = [landmark, place].filter(Boolean).join(", ");
+  } else {
+    line2 = [place, city].filter(Boolean).join(", ");
+  }
+  if (line2) lines.push(line2);
+  if (pincode && district) lines.push(`${district},PIN - ${pincode}`);
+
+  return lines.join("\n");
 };
 
 const cleanedNumber = (aadhar) => aadhar.replace(/[^\d]/g, "").trim();
@@ -422,6 +457,7 @@ module.exports = {
   formatAddressSlash,
   formatAddressComma,
   capitalizeAddress,
+  formatAgencyAddress,
   mmToPt,
   cleanedNumber,
   ujjwalaRegularBoxedString,

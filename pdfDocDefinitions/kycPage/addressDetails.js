@@ -26,6 +26,8 @@ function generateAddressDetailsSection(user) {
     rationCardNo,
   } = { ...user };
 
+  // console.log("POA code", poaCode)
+
   hName = hName.toUpperCase();
   hNo = hNo.toUpperCase();
   wardNo = wardNo.toUpperCase();
@@ -40,8 +42,8 @@ function generateAddressDetailsSection(user) {
   user.docDate = docDate;
 
   // const { fonts } = require("pdfmake/build/pdfmake");
-  console.log("Pincode :  at kyc page address details", pinCode)
-  console.log('Ration card state at kyc details', rationCardState, "end")
+  // console.log("Pincode :  at kyc page address details", pinCode)
+  // console.log('Ration card state at kyc details', rationCardState, "end")
 
   // console.log("Address details for decl page", fName);
   const dimAddressDet = 136;

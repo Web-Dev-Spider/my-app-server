@@ -1,6 +1,6 @@
-console.log("Inside pdfController.js");
+// console.log("Inside pdfController.js");
 const PdfPrinter = require("pdfmake/src/printer");
-console.log("after importing pdf printer");
+// console.log("after importing pdf printer");
 const path = require("path");
 const fonts = {
   Roboto: {
@@ -12,7 +12,7 @@ const fonts = {
 };
 
 const { buildKYCDocDef } = require("../pdfDocDefinitions/kycPage/kycDocDefinition");
-const { formatUser, capitalizeWords } = require("../helperFunctions/helpers");
+const { formatUser, capitalizeWords, formatAgencyAddress } = require("../helperFunctions/helpers");
 const Agency = require("../models/Agency");
 const printer = new PdfPrinter(fonts);
 
@@ -26,32 +26,40 @@ const createKYCPDF = async (req, res) => {
 
     let agencyDetails = {};
     if (agency) {
-      const { buildingNo, place, street, city, district, pincode } = agency.address || {};
+      const formattedAddress = formatAgencyAddress(agency.address);
+      //   // console.log("Agency: ", agency);
+      //   const { buildingNo, place, street, city, district, pincode, landmark } = agency.address || {};
 
-      let formattedAddress = "";
-      if (buildingNo || place) formattedAddress += [buildingNo, place].filter(Boolean).join(", ");
-      if (street) formattedAddress += (formattedAddress ? ", " : "") + street; // Add to existing line or start new?
-      // Let's create lines for the PDF
-      const lines = [];
-      const line1 = [buildingNo, place, street].filter(Boolean).join(", ");
-      if (line1) lines.push(line1);
-      const line2 = [city, district].filter(Boolean).join(", ");
-      if (line2) lines.push(line2);
-      if (pincode) lines.push(`PIN - ${pincode}`);
+      //   let formattedAddress = "";
+      //   if (buildingNo || street) formattedAddress += [buildingNo, street].filter(Boolean).join(", ");
+      //   if (place) formattedAddress += (formattedAddress ? ", " : "") + place; // Add to existing line or start new?
+      //   // Let's create lines for the PDF
+      //   const lines = [];
+      //   const line1 = [buildingNo, street].filter(Boolean).join(", ");
+      //   if (line1) lines.push(line1);
+      //   let line2 = "";
+      //   if (place === city) {
+
+      //     line2 = [landmark, place].filter(Boolean).join(", ");
+      //   } else {
+      //     line2 = [place, city].filter(Boolean).join(", ");
+      //   }
+      //   if (line2) lines.push(line2);
+      //   if (pincode && district) lines.push(`${district},PIN - ${pincode}`);
 
       agencyDetails = {
         name: agency.name,
-        formattedAddress: lines.join("\n")
+        formattedAddress
       };
-    } else {
+    } else
       agencyDetails = {
         name: "Agency Name",
         formattedAddress: "Agency Address"
       };
-    }
+
 
     const { selectedPages } = user;
-    console.log("Selected Pages:", selectedPages);
+    // console.log("Selected Pages:", selectedPages);
     //   console.log("Formatted user:", formatUser(user));
     user = formatUser(user);
     const docDefinition = buildKYCDocDef({ user, selectedPages, agencyDetails });
@@ -71,6 +79,7 @@ const createKYCPDF = async (req, res) => {
     console.error("Error creating PDF:", error);
     res.status(500).json({ success: false, message: "Error generating PDF" });
   }
-};
+
+}
 
 module.exports = { createKYCPDF };
