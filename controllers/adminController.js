@@ -1,18 +1,19 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Agency = require("../models/Agency");
+const distributorCount = require("../config/distributorCount");
 
 const getStats = async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments() - 1;
-        const activeUsers = await User.countDocuments({ isActive: true }) - 1;
+        const totalUsers = await User.countDocuments({ role: { $ne: 'SUPER-ADMIN' } });
+        const activeUsers = await User.countDocuments({ isActive: true, role: { $ne: 'SUPER-ADMIN' } });
 
         // Aggregate distributors by company
         const distributors = await Agency.aggregate([
             {
                 $group: {
                     _id: "$company",
-                    count: { $sum: 1 - 1 },
+                    count: { $sum: 1 },
                 },
             },
         ]);
@@ -35,6 +36,7 @@ const getStats = async (req, res) => {
             totalUsers,
             activeUsers,
             distributors: distData,
+            marketCounts: distributorCount
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
