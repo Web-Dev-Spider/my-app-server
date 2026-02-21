@@ -4,6 +4,7 @@ const inventoryController = require("../controllers/inventoryController");
 const supplierController = require("../controllers/supplierController");
 const productController = require("../controllers/productController");
 const vehicleController = require("../controllers/vehicleController");
+const stockLocationController = require("../controllers/stockLocationController");
 const { authenticate } = require("../middlewares/authMiddleware");
 
 // Ensure routes are protected
@@ -45,5 +46,12 @@ router.delete("/vehicle/:id", vehicleController.deleteVehicle);
 // Compliance Notifications
 router.get("/compliance-notifications", vehicleController.getComplianceNotifications);
 router.put("/compliance-notifications/mark-read", vehicleController.markNotificationsRead);
+
+// Stock Locations
+router.post("/stock-location", stockLocationController.createStockLocation);
+router.get("/stock-locations", stockLocationController.getStockLocations);
+router.get("/stock-location/:id", stockLocationController.getStockLocation);
+router.put("/stock-location/:id", stockLocationController.updateStockLocation);
+router.get("/stock-location/:id/stock", stockLocationController.getLocationStock);
 
 module.exports = router;

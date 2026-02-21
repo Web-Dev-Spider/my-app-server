@@ -107,7 +107,9 @@ const getVehicles = async (req, res) => {
         if (req.query.active === "true") filter.isActive = true;
         if (req.query.active === "false") filter.isActive = false;
 
-        const vehicles = await Vehicle.find(filter).sort({ createdAt: -1 });
+        const vehicles = await Vehicle.find(filter)
+            .populate("stockLocationId")
+            .sort({ createdAt: -1 });
         res.status(200).json({ success: true, vehicles });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -120,7 +122,7 @@ const getVehicle = async (req, res) => {
         const vehicle = await Vehicle.findOne({
             _id: req.params.id,
             agencyId: req.user.agencyId,
-        });
+        }).populate("stockLocationId");
         if (!vehicle) return res.status(404).json({ success: false, message: "Vehicle not found" });
         res.status(200).json({ success: true, vehicle });
     } catch (error) {
@@ -146,6 +148,24 @@ const updateVehicle = async (req, res) => {
 
         if (!vehicle) return res.status(404).json({ success: false, message: "Vehicle not found" });
 
+        // If registrationNumber changed, update the linked StockLocation
+        if (updates.registrationNumber || updates.vehicleName) {
+            if (vehicle.stockLocationId) {
+                const StockLocation = require("../models/StockLocation");
+                const vehicleName = vehicle.vehicleName || "";
+                const newLocationName = `${vehicle.registrationNumber} ${vehicleName}`.trim();
+
+                await StockLocation.findByIdAndUpdate(
+                    vehicle.stockLocationId,
+                    {
+                        name: newLocationName,
+                        code: vehicle.registrationNumber,
+                    },
+                    { runValidators: true }
+                );
+            }
+        }
+
         // Re-evaluate compliance notifications after update
         await generateComplianceNotifications(vehicle);
 
@@ -165,6 +185,16 @@ const toggleVehicleStatus = async (req, res) => {
             { new: true }
         );
         if (!vehicle) return res.status(404).json({ success: false, message: "Vehicle not found" });
+
+        // Sync isActive status to linked StockLocation
+        if (vehicle.stockLocationId) {
+            const StockLocation = require("../models/StockLocation");
+            await StockLocation.findByIdAndUpdate(
+                vehicle.stockLocationId,
+                { isActive },
+                { new: true }
+            );
+        }
 
         const action = isActive ? "activated" : "deactivated";
         res.status(200).json({ success: true, message: `Vehicle ${action} successfully`, vehicle });

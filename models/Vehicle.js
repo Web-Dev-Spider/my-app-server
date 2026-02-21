@@ -58,11 +58,47 @@ const vehicleSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
 
         remarks: { type: String },
+
+        // ── Stock Location ─────────────────────────────────────────────────
+        stockLocationId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "StockLocation",
+            default: null,
+        },
     },
     { timestamps: true }
 );
 
 vehicleSchema.index({ agencyId: 1 });
 vehicleSchema.index({ registrationNumber: 1 }, { unique: true });
+
+// ── Post-save hook: Auto-create StockLocation for vehicle ──────────────────
+vehicleSchema.post("save", async function (doc) {
+    // Only run on new documents
+    if (!this.isNew) return;
+
+    const StockLocation = require("./StockLocation");
+    try {
+        const vehicleName = doc.vehicleName || "";
+        const locationName = `${doc.registrationNumber} ${vehicleName}`.trim();
+
+        const location = await StockLocation.create({
+            agencyId: doc.agencyId,
+            locationType: "VEHICLE",
+            name: locationName,
+            code: doc.registrationNumber,
+            vehicleId: doc._id,
+        });
+
+        // Update vehicle with stockLocationId
+        await mongoose.model("Vehicle").updateOne(
+            { _id: doc._id },
+            { stockLocationId: location._id }
+        );
+    } catch (error) {
+        console.error("Error creating vehicle stock location:", error);
+        // Don't break vehicle creation if location creation fails
+    }
+});
 
 module.exports = mongoose.model("Vehicle", vehicleSchema);

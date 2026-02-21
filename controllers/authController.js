@@ -41,6 +41,28 @@ const register = async (req, res, next) => {
     const newAgency = await Agency.create({ name: gasAgencyName, sapcode, email, company });
     // console.log("Response received while createing", newAgency);
 
+    // Auto-create default StockLocations for the new agency
+    const StockLocation = require("../models/StockLocation");
+    try {
+      await StockLocation.create([
+        {
+          agencyId: newAgency._id,
+          locationType: "GODOWN",
+          name: "Main Godown",
+          code: "GDN-01",
+        },
+        {
+          agencyId: newAgency._id,
+          locationType: "SHOWROOM",
+          name: "Showroom",
+          code: "SRM-01",
+        },
+      ]);
+    } catch (locationError) {
+      console.error("Warning: Could not create default stock locations:", locationError);
+      // Continue with agency creation even if locations fail
+    }
+
     //if agency is created then create admin user
     if (newAgency) {
       const username = `admin_${sapcode}`;
