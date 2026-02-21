@@ -44,6 +44,8 @@ app.get("/", (req, res) => {
 //   console.log("App has started on port 3000");
 // });
 
+const { startComplianceCron } = require("./services/complianceCron");
+
 connectDB()
   .then(async () => {
     // One-time: sync AgencyProduct indexes to drop the old unique index
@@ -51,6 +53,9 @@ connectDB()
     const AgencyProduct = require("./models/inventory/AgencyProduct");
     await AgencyProduct.syncIndexes();
     console.log("AgencyProduct indexes synced.");
+
+    // Start scheduled jobs
+    startComplianceCron();
 
     app.listen(PORT, () => {
       console.log(`server is running on port ${PORT}`);

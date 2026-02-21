@@ -3,6 +3,7 @@ const router = express.Router();
 const inventoryController = require("../controllers/inventoryController");
 const supplierController = require("../controllers/supplierController");
 const productController = require("../controllers/productController");
+const vehicleController = require("../controllers/vehicleController");
 const { authenticate } = require("../middlewares/authMiddleware");
 
 // Ensure routes are protected
@@ -32,5 +33,17 @@ router.post("/customer/refill", inventoryController.processRefillDelivery);
 // Stock
 router.get("/stock/live", inventoryController.getLiveStock);
 // router.get("/products", inventoryController.getCylinderProducts); // Overwritten by new product route above
+
+// Vehicles
+router.post("/vehicle", vehicleController.createVehicle);
+router.get("/vehicles", vehicleController.getVehicles);
+router.get("/vehicle/:id", vehicleController.getVehicle);
+router.put("/vehicle/:id", vehicleController.updateVehicle);
+router.put("/vehicle/:id/status", vehicleController.toggleVehicleStatus);
+router.delete("/vehicle/:id", vehicleController.deleteVehicle);
+
+// Compliance Notifications
+router.get("/compliance-notifications", vehicleController.getComplianceNotifications);
+router.put("/compliance-notifications/mark-read", vehicleController.markNotificationsRead);
 
 module.exports = router;
