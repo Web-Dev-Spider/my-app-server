@@ -70,6 +70,5 @@ const vehicleSchema = new mongoose.Schema(
 );
 
 vehicleSchema.index({ agencyId: 1 });
-vehicleSchema.index({ registrationNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model("Vehicle", vehicleSchema);
