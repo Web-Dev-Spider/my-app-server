@@ -56,7 +56,7 @@ const createGlobalProduct = async (req, res) => {
 const getGlobalProducts = async (req, res) => {
     try {
         const products = await GlobalProduct.find().sort({ createdAt: -1 });
-
+        console.log("global products from global products controller", products)
         // productType now exists natively in schema, just add businessType alias for FE
         const mappedProducts = products.map(p => {
             const obj = p.toObject();

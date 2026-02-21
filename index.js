@@ -45,7 +45,13 @@ app.get("/", (req, res) => {
 // });
 
 connectDB()
-  .then(() => {
+  .then(async () => {
+    // One-time: sync AgencyProduct indexes to drop the old unique index
+    // (allows NFR products to be mapped multiple times). Can be removed after first run.
+    const AgencyProduct = require("./models/inventory/AgencyProduct");
+    await AgencyProduct.syncIndexes();
+    console.log("AgencyProduct indexes synced.");
+
     app.listen(PORT, () => {
       console.log(`server is running on port ${PORT}`);
     });

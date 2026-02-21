@@ -223,35 +223,33 @@ const deleteProduct = async (req, res) => {
 const getUnmappedGlobalProducts = async (req, res) => {
     try {
         const agencyId = req.user.agencyId;
-        // console.log(`[getUnmappedGlobalProducts] Fetching for agency: ${agencyId}`);
 
-        // 1. Get all AgencyProducts (mapped global products)
-        // Use lean() for performance
-        const agencyProducts = await AgencyProduct.find({ agencyId }).select('globalProductId').lean();
-
-        const mappedGlobalIds = agencyProducts
-            .map(p => p.globalProductId ? p.globalProductId.toString() : null)
-            .filter(Boolean);
-
-        // console.log(`[getUnmappedGlobalProducts] Found ${mappedGlobalIds.length} mapped products.`);
-
-        // DEBUG: Check totals
-        const totalGlobal = await GlobalProduct.countDocuments({});
-        const totalActive = await GlobalProduct.countDocuments({ isActive: true });
-        // console.log(`[getUnmappedGlobalProducts] DEBUG: Total Global: ${totalGlobal}, Total Active: ${totalActive}`);
-
-        // 2. Find global products NOT in the mapped list
-        // Use limit to prevent timeouts if list is huge
-        const unmappedProducts = await GlobalProduct.find({
-            _id: { $nin: mappedGlobalIds },
-            isActive: true
-        })
-            .select('name productCode productType variant category capacityKg businessType') // Select only essential fields + businessType
-            .sort({ name: 1 })
-            .limit(500) // Increase limit reasonably, but keep it safe
+        // 1. Get all AgencyProducts (mapped global products) — only for non-NFR
+        const agencyProducts = await AgencyProduct.find({ agencyId })
+            .select('globalProductId')
+            .populate({ path: 'globalProductId', select: 'productType' })
             .lean();
 
-        // console.log(`[getUnmappedGlobalProducts] Returning ${unmappedProducts.length} unmapped products.`);
+        // Only exclude mappings for CYLINDER and PR (non-NFR).
+        // NFR products can be mapped multiple times, so they should always appear.
+        const mappedNonNfrIds = agencyProducts
+            .filter(p => p.globalProductId && p.globalProductId.productType !== 'NFR')
+            .map(p => p.globalProductId._id.toString());
+
+        // 2. Find global products: exclude already-mapped non-NFR, but always include NFR
+        const unmappedProducts = await GlobalProduct.find({
+            isActive: true,
+            $or: [
+                { productType: 'NFR' }, // NFR always shown
+                { _id: { $nin: mappedNonNfrIds } } // non-NFR only if not yet mapped
+            ]
+        })
+            .select('name productCode productType variant category subcategory capacityKg valuationType isFiber isReturnable hsnCode taxRate unit')
+            .sort({ name: 1 })
+            .limit(500)
+            .lean();
+
+        console.log("unmapped products", unmappedProducts)
 
         res.status(200).json({ success: true, products: unmappedProducts });
     } catch (error) {
@@ -284,9 +282,12 @@ const mapGlobalProduct = async (req, res) => {
         const globalProduct = await GlobalProduct.findById(globalProductId);
         if (!globalProduct) return res.status(404).json({ success: false, message: "Global product not found" });
 
-        // Check if already mapped
-        const existingMapping = await AgencyProduct.findOne({ agencyId, globalProductId });
-        if (existingMapping) return res.status(409).json({ success: false, message: "Product already added to agency" });
+        // Check if already mapped (only for non-NFR products).
+        // NFR products can be mapped multiple times from the same global template.
+        if (globalProduct.productType !== 'NFR') {
+            const existingMapping = await AgencyProduct.findOne({ agencyId, globalProductId });
+            if (existingMapping) return res.status(409).json({ success: false, message: "Product already added to agency" });
+        }
 
         // Prepare Opening Stock Object based on product type
         let openingStockData = {};

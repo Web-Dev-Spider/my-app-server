@@ -74,7 +74,8 @@ const agencyProductSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Ensure unique product per agency
-agencyProductSchema.index({ agencyId: 1, globalProductId: 1 }, { unique: true });
+// Index for fast lookups. Uniqueness for non-NFR products is enforced at application level
+// to allow NFR global templates to be mapped multiple times to the same agency.
+agencyProductSchema.index({ agencyId: 1, globalProductId: 1 });
 
 module.exports = mongoose.model("AgencyProduct", agencyProductSchema);

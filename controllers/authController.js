@@ -73,7 +73,7 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
-    // console.log(identifier, password);
+    console.log(identifier, password);
 
     // console.log(req.body);
     if (!identifier || !password) {
@@ -101,11 +101,19 @@ const login = async (req, res, next) => {
     //Delete password from existing user to send in response
     const userSafe = userExists.toObject();
     delete userSafe.password;
-    // console.log("User safe", userSafe);
+    console.log("User safe", userSafe);
 
     const agency = await Agency.findById(userExists.agencyId);
     // console.log("agency", agency);
     // console.log("Agency", agency);
+
+    // Block login if the user's agency has been deactivated by super-admin
+    if (userSafe.role !== "SUPER_ADMIN" && (!agency || !agency.isActive)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access is denied, contact the administrator",
+      });
+    }
 
     //generate token
     const token = generateJwtToken({ user: userSafe, role: userExists.role, agency });
@@ -114,7 +122,7 @@ const login = async (req, res, next) => {
       httpOnly: true,
       secure: isProduction, // secure only in production
       sameSite: isProduction ? "none" : "lax", // none for cross-site (prod), lax for local
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 5 * 60 * 60 * 1000,
     });
 
     return res
@@ -130,9 +138,28 @@ const login = async (req, res, next) => {
 const me = async (req, res) => {
   try {
     // console.log("req.user at auth/me: ", req.user);
+
+    // Fetch agency data so the frontend gets it on page refresh
+    let agency = null;
+    if (req.user.agencyId) {
+      agency = await Agency.findById(req.user.agencyId);
+    }
+
+    // Check if agency is still active (in case it was deactivated after login)
+    if (req.user.role !== "SUPER_ADMIN" && req.user.agencyId) {
+      if (!agency || !agency.isActive) {
+        res.clearCookie("token");
+        return res.status(403).json({
+          success: false,
+          message: "Access is denied, contact the administrator",
+        });
+      }
+    }
+
     res.json({
       success: true,
       user: req.user,
+      agency,
     });
   } catch (error) {
     // console.log(error);
