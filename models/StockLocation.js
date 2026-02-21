@@ -51,7 +51,7 @@ const stockLocationSchema = new mongoose.Schema(
 
     notes: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Compound unique index: agencyId + name

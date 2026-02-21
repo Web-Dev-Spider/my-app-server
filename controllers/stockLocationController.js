@@ -134,7 +134,7 @@ const updateStockLocation = async (req, res) => {
     const location = await StockLocation.findOneAndUpdate(
       { _id: req.params.id, agencyId: req.user.agencyId },
       updates,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!location) {
