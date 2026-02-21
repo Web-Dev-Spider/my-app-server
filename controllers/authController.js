@@ -54,10 +54,38 @@ const register = async (req, res, next) => {
         company,
         permissions: ALL_PERMISSIONS,
         createdBy: null,
+        // approvalStatus defaults to 'pending' from schema
       });
       // console.log("Response received while createing user", newUser);
 
       if (newUser) {
+        // Send registration confirmation email
+        const registrationEmailHtml = `
+          <h2>Registration Confirmation</h2>
+          <p>Welcome to our application!</p>
+          <p>Your agency registration has been received:</p>
+          <ul>
+            <li><strong>Agency Name:</strong> ${gasAgencyName}</li>
+            <li><strong>Email:</strong> ${email}</li>
+            <li><strong>Company:</strong> ${company}</li>
+            <li><strong>SAP Code:</strong> ${sapcode}</li>
+          </ul>
+          <p>Your admin account is pending approval from our team. We'll send you an email notification once approved.</p>
+          <p>Do not share this information with anyone.</p>
+        `;
+
+        try {
+          await sendEmail({
+            email,
+            subject: "Registration Confirmation - Pending Approval",
+            html: registrationEmailHtml,
+            message: `Your agency registration has been received. Your admin account is pending approval from our team.`,
+          });
+        } catch (emailError) {
+          console.error("Error sending registration email:", emailError);
+          // Don't fail the registration if email fails
+        }
+
         // const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
         // res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
         return res.status(201).json({ message: "Agency Added and admin created", success: true });
@@ -98,6 +126,26 @@ const login = async (req, res, next) => {
     if (!validPassword) {
       return res.status(404).json({ success: false, message: "Invalid login credentials" });
     }
+
+    // Check approval status - block login if not approved (SUPER-ADMIN users bypass this)
+    const isSuperAdmin = userExists.role === "SUPER-ADMIN" || userExists.role === "SUPER_ADMIN";
+
+    if (!isSuperAdmin) {
+      if (userExists.approvalStatus === "pending") {
+        return res.status(403).json({
+          success: false,
+          message: "Your registration is pending admin approval. Please wait for approval email.",
+        });
+      }
+
+      if (userExists.approvalStatus === "rejected") {
+        return res.status(403).json({
+          success: false,
+          message: `Your registration was rejected. Reason: ${userExists.rejectionNote || "Not provided"}`,
+        });
+      }
+    }
+
     //Delete password from existing user to send in response
     const userSafe = userExists.toObject();
     delete userSafe.password;
@@ -108,7 +156,7 @@ const login = async (req, res, next) => {
     // console.log("Agency", agency);
 
     // Block login if the user's agency has been deactivated by super-admin
-    if (userSafe.role !== "SUPER_ADMIN" && (!agency || !agency.isActive)) {
+    if (!isSuperAdmin && (!agency || !agency.isActive)) {
       return res.status(403).json({
         success: false,
         message: "Access is denied, contact the administrator",
@@ -146,7 +194,8 @@ const me = async (req, res) => {
     }
 
     // Check if agency is still active (in case it was deactivated after login)
-    if (req.user.role !== "SUPER_ADMIN" && req.user.agencyId) {
+    const isSuperAdmin = req.user.role === "SUPER-ADMIN" || req.user.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && req.user.agencyId) {
       if (!agency || !agency.isActive) {
         res.clearCookie("token");
         return res.status(403).json({
@@ -179,11 +228,9 @@ const updateProfile = async (req, res) => {
     if (mobile) updateData.mobile = mobile;
     if (username) updateData.username = username;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    ).select("-password");
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true, runValidators: true }).select(
+      "-password",
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -207,8 +254,6 @@ const logout = (req, res) => {
   res.status(200).json({ success: true, message: "Logout successful" });
 };
 
-
-
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -220,10 +265,7 @@ const forgotPassword = async (req, res) => {
 
     const resetToken = crypto.randomBytes(20).toString("hex");
 
-    user.resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
     user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
@@ -231,7 +273,7 @@ const forgotPassword = async (req, res) => {
 
     // Create reset URL
     // Use origin from request header to ensure link points to the correct frontend (local or prod)
-    const frontendUrl = req.get('origin') || VITE_BASE_URL || "http://localhost:5173";
+    const frontendUrl = req.get("origin") || VITE_BASE_URL || "http://localhost:5173";
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
@@ -241,7 +283,7 @@ const forgotPassword = async (req, res) => {
         email: user.email,
         subject: "Password Reset Token",
         message,
-        html: `<p>You requested a password reset</p><p>Click this link to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`
+        html: `<p>You requested a password reset</p><p>Click this link to reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
       });
 
       res.status(200).json({ success: true, message: `Email sent to ${user.email}` });
@@ -252,7 +294,6 @@ const forgotPassword = async (req, res) => {
       await user.save();
       return res.status(500).json({ success: false, message: "Email could not be sent" });
     }
-
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -262,10 +303,7 @@ const resetPassword = async (req, res) => {
   try {
     const { resetToken, password } = req.body;
 
-    const resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    const resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
     const user = await User.findOne({
       resetPasswordToken,

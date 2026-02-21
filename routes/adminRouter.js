@@ -1,5 +1,20 @@
 const express = require("express");
-const { getStats, getAllAgencies, toggleAgencyStatus, getAgencyDetails, updateAgencyDetails, createUser, getAgencyUsers, updateUser, deleteUser, toggleUserStatus, getAgencyStats } = require("../controllers/adminController");
+const {
+  getStats,
+  getAllAgencies,
+  toggleAgencyStatus,
+  getAgencyDetails,
+  updateAgencyDetails,
+  createUser,
+  getAgencyUsers,
+  updateUser,
+  deleteUser,
+  toggleUserStatus,
+  getAgencyStats,
+  getPendingRegistrations,
+  approvePendingUser,
+  rejectPendingUser,
+} = require("../controllers/adminController");
 const { authenticate } = require("../middlewares/authMiddleware");
 const checkRole = require("../middlewares/roleMiddleware");
 
@@ -17,16 +32,21 @@ router.put("/user/:id", authenticate, checkRole("ADMIN"), updateUser);
 router.put("/user/:id/status", authenticate, checkRole("ADMIN"), toggleUserStatus);
 router.delete("/user/:id", authenticate, checkRole("ADMIN"), deleteUser);
 
+// Approval workflow routes
+router.get("/pending-registrations", authenticate, getPendingRegistrations);
+router.put("/registration/:userId/approve", authenticate, approvePendingUser);
+router.put("/registration/:userId/reject", authenticate, rejectPendingUser);
+
 const {
-    createGlobalProduct,
-    getGlobalProducts,
-    updateGlobalProduct,
-    deleteGlobalProduct,
-    getCategories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
-    getProductSchemaConfig
+  createGlobalProduct,
+  getGlobalProducts,
+  updateGlobalProduct,
+  deleteGlobalProduct,
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getProductSchemaConfig,
 } = require("../controllers/globalProductController");
 
 // Global Product Management (Super Admin)
