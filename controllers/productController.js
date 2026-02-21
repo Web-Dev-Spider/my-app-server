@@ -1,368 +1,421 @@
-const CylinderProduct = require('../models/inventory/CylinderProduct');
-const NFRProduct = require('../models/inventory/NFRProduct');
-const PRProduct = require('../models/inventory/PRProduct');
-const GlobalProduct = require('../models/inventory/GlobalProduct');
-const AgencyProduct = require('../models/inventory/AgencyProduct');
+const CylinderProduct = require("../models/inventory/CylinderProduct");
+const NFRProduct = require("../models/inventory/NFRProduct");
+const PRProduct = require("../models/inventory/PRProduct");
+const GlobalProduct = require("../models/inventory/GlobalProduct");
+const AgencyProduct = require("../models/inventory/AgencyProduct");
+const StockLedger = require("../models/StockLedger");
+const { getOrCreateDefaultGodown } = require("../utils/getOrCreateDefaultGodown");
+const mongoose = require("mongoose");
 
 // Create Product
 const createProduct = async (req, res) => {
-    try {
-        const { type, ...data } = req.body;
-        data.agencyId = req.user.agencyId;
+  try {
+    const { type, ...data } = req.body;
+    data.agencyId = req.user.agencyId;
 
-        let product;
-        if (type === 'cylinder') {
-            product = new CylinderProduct(data);
-        } else if (type === 'nfr' || type === 'item') {
-            product = new NFRProduct(data);
-        } else if (type === 'pr') {
-            product = new PRProduct(data);
-        } else {
-            return res.status(400).json({ success: false, message: 'Invalid product type' });
-        }
-
-        await product.save();
-        res.status(201).json({ success: true, message: 'Product created successfully', product });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    let product;
+    if (type === "cylinder") {
+      product = new CylinderProduct(data);
+    } else if (type === "nfr" || type === "item") {
+      product = new NFRProduct(data);
+    } else if (type === "pr") {
+      product = new PRProduct(data);
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid product type" });
     }
+
+    await product.save();
+    res.status(201).json({ success: true, message: "Product created successfully", product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Get Products
 const getProducts = async (req, res) => {
-    try {
-        const { type } = req.query;
-        let products = [];
-        const filter = { agencyId: req.user.agencyId };
-        const agencyProductFilter = { agencyId: req.user.agencyId };
+  try {
+    const { type } = req.query;
+    let products = [];
+    const filter = { agencyId: req.user.agencyId };
+    const agencyProductFilter = { agencyId: req.user.agencyId };
 
-        if (req.query.active === 'true') {
-            filter.isActive = true;
-            agencyProductFilter.isEnabled = true;
-        }
-
-        const fetchLocalProducts = async () => {
-            if (type === 'cylinder') {
-                const cyls = await CylinderProduct.find(filter).sort({ createdAt: -1 }).lean();
-                return cyls.map(p => ({ ...p, type: 'cylinder' }));
-            } else if (type === 'nfr' || type === 'item') {
-                const items = await NFRProduct.find(filter).sort({ createdAt: -1 }).lean();
-                return items.map(p => ({ ...p, type: 'nfr' }));
-            } else if (type === 'pr') {
-                const prs = await PRProduct.find(filter).sort({ createdAt: -1 }).lean();
-                return prs.map(p => ({ ...p, type: 'pr' }));
-            } else {
-                const [cylinders, items, prs] = await Promise.all([
-                    CylinderProduct.find(filter).sort({ createdAt: -1 }).lean(),
-                    NFRProduct.find(filter).sort({ createdAt: -1 }).lean(),
-                    PRProduct.find(filter).sort({ createdAt: -1 }).lean()
-                ]);
-                return [
-                    ...cylinders.map(p => ({ ...p, type: 'cylinder' })),
-                    ...items.map(p => ({ ...p, type: 'nfr' })),
-                    ...prs.map(p => ({ ...p, type: 'pr' }))
-                ];
-            }
-        };
-
-        const fetchAgencyProducts = async () => {
-            const agencyProducts = await AgencyProduct.find(agencyProductFilter)
-                .populate('globalProductId')
-                .lean();
-
-            return agencyProducts.map(ap => {
-                if (!ap.globalProductId) return null;
-                const gp = ap.globalProductId;
-                let mappedType = 'nfr';
-                if (gp.productType === 'CYLINDER') mappedType = 'cylinder';
-                else if (gp.productType === 'PR') mappedType = 'pr';
-
-                return {
-                    _id: ap._id,
-                    type: mappedType,
-                    productType: gp.productType,
-                    name: ap.localName || gp.name,
-                    productCode: gp.productCode,
-                    itemCode: ap.itemCode,
-                    capacityKg: gp.capacityKg,
-                    category: gp.category,
-                    subcategory: gp.subcategory,
-                    valuationType: gp.valuationType,
-                    unit: gp.unit || 'NOS',
-                    hsnCode: gp.hsnCode,
-                    taxRate: gp.taxRate,
-                    currentPurchasePrice: ap.purchasePrice,
-                    currentSalePrice: ap.currentSalePrice,
-                    priceEffectiveDate: ap.priceEffectiveDate,
-                    isActive: ap.isEnabled,
-                    isGlobal: true,
-                    isFiber: gp.isFiber,
-                    isReturnable: gp.isReturnable,
-                    stock: ap.stock
-                };
-            }).filter(p => p !== null && (!type || p.type === type || (type === 'nfr' && p.type === 'item'))); // Allow item/nfr mapping if strictly needed or just precise match
-        };
-
-        const [localProds, agencyProds] = await Promise.all([
-            fetchLocalProducts(),
-            fetchAgencyProducts()
-        ]);
-
-        products = [...localProds, ...agencyProds];
-
-        // Type filtering for Agency Products specifically if passed in query (double check)
-        if (type) {
-            if (type === 'nfr') {
-                // Include only NFR (and legacy item which map to nfr)
-                products = products.filter(p => p.type === 'nfr');
-            } else {
-                products = products.filter(p => p.type === type);
-            }
-        }
-
-        // Sort combined list by name
-        products.sort((a, b) => a.name.localeCompare(b.name));
-
-        res.status(200).json({ success: true, products });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    if (req.query.active === "true") {
+      filter.isActive = true;
+      agencyProductFilter.isEnabled = true;
     }
+
+    const fetchLocalProducts = async () => {
+      if (type === "cylinder") {
+        const cyls = await CylinderProduct.find(filter).sort({ createdAt: -1 }).lean();
+        return cyls.map((p) => ({ ...p, type: "cylinder" }));
+      } else if (type === "nfr" || type === "item") {
+        const items = await NFRProduct.find(filter).sort({ createdAt: -1 }).lean();
+        return items.map((p) => ({ ...p, type: "nfr" }));
+      } else if (type === "pr") {
+        const prs = await PRProduct.find(filter).sort({ createdAt: -1 }).lean();
+        return prs.map((p) => ({ ...p, type: "pr" }));
+      } else {
+        const [cylinders, items, prs] = await Promise.all([
+          CylinderProduct.find(filter).sort({ createdAt: -1 }).lean(),
+          NFRProduct.find(filter).sort({ createdAt: -1 }).lean(),
+          PRProduct.find(filter).sort({ createdAt: -1 }).lean(),
+        ]);
+        return [
+          ...cylinders.map((p) => ({ ...p, type: "cylinder" })),
+          ...items.map((p) => ({ ...p, type: "nfr" })),
+          ...prs.map((p) => ({ ...p, type: "pr" })),
+        ];
+      }
+    };
+
+    const fetchAgencyProducts = async () => {
+      const agencyProducts = await AgencyProduct.find(agencyProductFilter).populate("globalProductId").lean();
+
+      return agencyProducts
+        .map((ap) => {
+          if (!ap.globalProductId) return null;
+          const gp = ap.globalProductId;
+          let mappedType = "nfr";
+          if (gp.productType === "CYLINDER") mappedType = "cylinder";
+          else if (gp.productType === "PR") mappedType = "pr";
+
+          return {
+            _id: ap._id,
+            type: mappedType,
+            productType: gp.productType,
+            name: ap.localName || gp.name,
+            productCode: gp.productCode,
+            itemCode: ap.itemCode,
+            capacityKg: gp.capacityKg,
+            category: gp.category,
+            subcategory: gp.subcategory,
+            valuationType: gp.valuationType,
+            unit: gp.unit || "NOS",
+            hsnCode: gp.hsnCode,
+            taxRate: gp.taxRate,
+            currentPurchasePrice: ap.purchasePrice,
+            currentSalePrice: ap.currentSalePrice,
+            priceEffectiveDate: ap.priceEffectiveDate,
+            isActive: ap.isEnabled,
+            isGlobal: true,
+            isFiber: gp.isFiber,
+            isReturnable: gp.isReturnable,
+            stock: ap.stock,
+          };
+        })
+        .filter((p) => p !== null && (!type || p.type === type || (type === "nfr" && p.type === "item"))); // Allow item/nfr mapping if strictly needed or just precise match
+    };
+
+    const [localProds, agencyProds] = await Promise.all([fetchLocalProducts(), fetchAgencyProducts()]);
+
+    products = [...localProds, ...agencyProds];
+
+    // Type filtering for Agency Products specifically if passed in query (double check)
+    if (type) {
+      if (type === "nfr") {
+        // Include only NFR (and legacy item which map to nfr)
+        products = products.filter((p) => p.type === "nfr");
+      } else {
+        products = products.filter((p) => p.type === type);
+      }
+    }
+
+    // Sort combined list by name
+    products.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Update Product
 const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { type, ...updates } = req.body;
-        delete updates.agencyId; // Prevent changing agency
+  try {
+    const { id } = req.params;
+    const { type, ...updates } = req.body;
+    delete updates.agencyId; // Prevent changing agency
 
-        let product;
-        if (type === 'cylinder') {
-            product = await CylinderProduct.findOneAndUpdate(
-                { _id: id, agencyId: req.user.agencyId },
-                updates,
-                { new: true }
-            );
-        } else if (type === 'nfr' || type === 'item') {
-            product = await NFRProduct.findOneAndUpdate(
-                { _id: id, agencyId: req.user.agencyId },
-                updates,
-                { new: true }
-            );
-        } else if (type === 'pr') {
-            product = await PRProduct.findOneAndUpdate(
-                { _id: id, agencyId: req.user.agencyId },
-                updates,
-                { new: true }
-            );
-        } else {
-            return res.status(400).json({ success: false, message: 'Invalid product type for update' });
-        }
-
-        if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        res.status(200).json({ success: true, message: 'Product updated successfully', product });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    let product;
+    if (type === "cylinder") {
+      product = await CylinderProduct.findOneAndUpdate({ _id: id, agencyId: req.user.agencyId }, updates, {
+        new: true,
+      });
+    } else if (type === "nfr" || type === "item") {
+      product = await NFRProduct.findOneAndUpdate({ _id: id, agencyId: req.user.agencyId }, updates, { new: true });
+    } else if (type === "pr") {
+      product = await PRProduct.findOneAndUpdate({ _id: id, agencyId: req.user.agencyId }, updates, { new: true });
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid product type for update" });
     }
+
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    res.status(200).json({ success: true, message: "Product updated successfully", product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Toggle Product Status
 const toggleProductStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { type, isActive } = req.body;
+  try {
+    const { id } = req.params;
+    const { type, isActive } = req.body;
 
-        let product;
-        const query = { _id: id, agencyId: req.user.agencyId };
-        const update = { isActive };
+    let product;
+    const query = { _id: id, agencyId: req.user.agencyId };
+    const update = { isActive };
 
-        if (type === 'cylinder') {
-            product = await CylinderProduct.findOneAndUpdate(query, update, { new: true });
-        } else if (type === 'nfr' || type === 'item') {
-            product = await NFRProduct.findOneAndUpdate(query, update, { new: true });
-        } else if (type === 'pr') {
-            product = await PRProduct.findOneAndUpdate(query, update, { new: true });
-        } else {
-            return res.status(400).json({ success: false, message: 'Invalid product type' });
-        }
-
-        if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        res.status(200).json({ success: true, message: `Product ${isActive ? 'activated' : 'deactivated'}`, product });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    if (type === "cylinder") {
+      product = await CylinderProduct.findOneAndUpdate(query, update, { new: true });
+    } else if (type === "nfr" || type === "item") {
+      product = await NFRProduct.findOneAndUpdate(query, update, { new: true });
+    } else if (type === "pr") {
+      product = await PRProduct.findOneAndUpdate(query, update, { new: true });
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid product type" });
     }
+
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    res.status(200).json({ success: true, message: `Product ${isActive ? "activated" : "deactivated"}`, product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Delete Product
 const deleteProduct = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { type } = req.query; // Pass type in query for delete
+  try {
+    const { id } = req.params;
+    const { type } = req.query; // Pass type in query for delete
 
-        let product;
-        const query = { _id: id, agencyId: req.user.agencyId };
+    let product;
+    const query = { _id: id, agencyId: req.user.agencyId };
 
-        if (type === 'cylinder') {
-            product = await CylinderProduct.findOneAndDelete(query);
-        } else if (type === 'nfr' || type === 'item') {
-            product = await NFRProduct.findOneAndDelete(query);
-        } else if (type === 'pr') {
-            product = await PRProduct.findOneAndDelete(query);
-        } else {
-            return res.status(400).json({ success: false, message: 'Invalid product type' });
-        }
-
-        if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        res.status(200).json({ success: true, message: 'Product deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    if (type === "cylinder") {
+      product = await CylinderProduct.findOneAndDelete(query);
+    } else if (type === "nfr" || type === "item") {
+      product = await NFRProduct.findOneAndDelete(query);
+    } else if (type === "pr") {
+      product = await PRProduct.findOneAndDelete(query);
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid product type" });
     }
+
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    res.status(200).json({ success: true, message: "Product deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Get Global Products that are not yet mapped to the agency
 const getUnmappedGlobalProducts = async (req, res) => {
-    try {
-        const agencyId = req.user.agencyId;
+  try {
+    const agencyId = req.user.agencyId;
 
-        // 1. Get all AgencyProducts (mapped global products) — only for non-NFR
-        const agencyProducts = await AgencyProduct.find({ agencyId })
-            .select('globalProductId')
-            .populate({ path: 'globalProductId', select: 'productType' })
-            .lean();
+    // 1. Get all AgencyProducts (mapped global products) — only for non-NFR
+    const agencyProducts = await AgencyProduct.find({ agencyId })
+      .select("globalProductId")
+      .populate({ path: "globalProductId", select: "productType" })
+      .lean();
 
-        // Only exclude mappings for CYLINDER and PR (non-NFR).
-        // NFR products can be mapped multiple times, so they should always appear.
-        const mappedNonNfrIds = agencyProducts
-            .filter(p => p.globalProductId && p.globalProductId.productType !== 'NFR')
-            .map(p => p.globalProductId._id.toString());
+    // Only exclude mappings for CYLINDER and PR (non-NFR).
+    // NFR products can be mapped multiple times, so they should always appear.
+    const mappedNonNfrIds = agencyProducts
+      .filter((p) => p.globalProductId && p.globalProductId.productType !== "NFR")
+      .map((p) => p.globalProductId._id.toString());
 
-        // 2. Find global products: exclude already-mapped non-NFR, but always include NFR
-        const unmappedProducts = await GlobalProduct.find({
-            isActive: true,
-            $or: [
-                { productType: 'NFR' }, // NFR always shown
-                { _id: { $nin: mappedNonNfrIds } } // non-NFR only if not yet mapped
-            ]
-        })
-            .select('name productCode productType variant category subcategory capacityKg valuationType isFiber isReturnable hsnCode taxRate unit')
-            .sort({ name: 1 })
-            .limit(500)
-            .lean();
+    // 2. Find global products: exclude already-mapped non-NFR, but always include NFR
+    const unmappedProducts = await GlobalProduct.find({
+      isActive: true,
+      $or: [
+        { productType: "NFR" }, // NFR always shown
+        { _id: { $nin: mappedNonNfrIds } }, // non-NFR only if not yet mapped
+      ],
+    })
+      .select(
+        "name productCode productType variant category subcategory capacityKg valuationType isFiber isReturnable hsnCode taxRate unit",
+      )
+      .sort({ name: 1 })
+      .limit(500)
+      .lean();
 
-        console.log("unmapped products", unmappedProducts)
+    console.log("unmapped products", unmappedProducts);
 
-        res.status(200).json({ success: true, products: unmappedProducts });
-    } catch (error) {
-        console.error("[getUnmappedGlobalProducts] Error:", error);
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({ success: true, products: unmappedProducts });
+  } catch (error) {
+    console.error("[getUnmappedGlobalProducts] Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // Map a Global Product to the Agency
 const mapGlobalProduct = async (req, res) => {
-    try {
-        const {
-            globalProductId,
-            currentPurchasePrice,
-            currentSalePrice,
-            openingStockFilled,
-            openingStockEmpty,
-            openingStockDefective,
-            openingStockSound,
-            openingStockDefectivePR,
-            // NFR-specific fields from frontend
-            localName,
-            itemCode,
-            priceEffectiveDate
-        } = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-        const agencyId = req.user.agencyId;
+  try {
+    const {
+      globalProductId,
+      currentPurchasePrice,
+      currentSalePrice,
+      openingStockFilled,
+      openingStockEmpty,
+      openingStockDefective,
+      openingStockSound,
+      openingStockDefectivePR,
+      // NFR-specific fields from frontend
+      localName,
+      itemCode,
+      priceEffectiveDate,
+    } = req.body;
 
-        // Verify Global Product exists
-        const globalProduct = await GlobalProduct.findById(globalProductId);
-        if (!globalProduct) return res.status(404).json({ success: false, message: "Global product not found" });
+    const agencyId = req.user.agencyId;
 
-        // Check if already mapped (only for non-NFR products).
-        // NFR products can be mapped multiple times from the same global template.
-        if (globalProduct.productType !== 'NFR') {
-            const existingMapping = await AgencyProduct.findOne({ agencyId, globalProductId });
-            if (existingMapping) return res.status(409).json({ success: false, message: "Product already added to agency" });
-        }
+    // Verify Global Product exists
+    const globalProduct = await GlobalProduct.findById(globalProductId).session(session);
+    if (!globalProduct) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Global product not found" });
+    }
 
-        // Prepare Opening Stock Object based on product type
-        let openingStockData = {};
-        let stockData = {};
+    // Check if already mapped (only for non-NFR products).
+    // NFR products can be mapped multiple times from the same global template.
+    if (globalProduct.productType !== "NFR") {
+      const existingMapping = await AgencyProduct.findOne({ agencyId, globalProductId }).session(session);
+      if (existingMapping) {
+        await session.abortTransaction();
+        return res.status(409).json({ success: false, message: "Product already added to agency" });
+      }
+    }
 
-        if (globalProduct.productType === 'CYLINDER') {
-            // Cylinders have detailed opening stock
-            openingStockData = {
-                filled: { quantity: Number(openingStockFilled) || 0, price: Number(currentPurchasePrice) || 0 },
-                empty: { quantity: Number(openingStockEmpty) || 0 },
-                defective: { quantity: Number(openingStockDefective) || 0 }
-            };
-            // Initial Live Stock matches Opening Stock
-            stockData = {
-                filled: Number(openingStockFilled) || 0,
-                empty: Number(openingStockEmpty) || 0,
-                defective: Number(openingStockDefective) || 0
-            };
-        } else if (globalProduct.productType === 'PR') {
-            // PRs have sound/defective
-            openingStockData = {
-                sound: { quantity: Number(openingStockSound) || 0, price: Number(currentPurchasePrice) || 0 },
-                defectivePR: { quantity: Number(openingStockDefectivePR) || 0 }
-            };
-            stockData = {
-                sound: Number(openingStockSound) || 0,
-                defectivePR: Number(openingStockDefectivePR) || 0
-            };
-        } else {
-            // NFR / FTL items (quantity only)
-            openingStockData = { simple: { quantity: Number(openingStockFilled) || 0, purchasePrice: Number(currentPurchasePrice) || 0, sellingPrice: Number(currentSalePrice) || 0 } };
-            stockData = { quantity: Number(openingStockFilled) || 0 };
-        }
+    // Prepare Opening Stock Object based on product type
+    let openingStockData = {};
+    let stockData = {};
 
-        // Create Mapping
-        const newMapping = new AgencyProduct({
+    if (globalProduct.productType === "CYLINDER") {
+      // Cylinders have detailed opening stock
+      openingStockData = {
+        filled: { quantity: Number(openingStockFilled) || 0, price: Number(currentPurchasePrice) || 0 },
+        empty: { quantity: Number(openingStockEmpty) || 0 },
+        defective: { quantity: Number(openingStockDefective) || 0 },
+      };
+      // Initial Live Stock matches Opening Stock
+      stockData = {
+        filled: Number(openingStockFilled) || 0,
+        empty: Number(openingStockEmpty) || 0,
+        defective: Number(openingStockDefective) || 0,
+      };
+    } else if (globalProduct.productType === "PR") {
+      // PRs have sound/defective
+      openingStockData = {
+        sound: { quantity: Number(openingStockSound) || 0, price: Number(currentPurchasePrice) || 0 },
+        defectivePR: { quantity: Number(openingStockDefectivePR) || 0 },
+      };
+      stockData = {
+        sound: Number(openingStockSound) || 0,
+        defectivePR: Number(openingStockDefectivePR) || 0,
+      };
+    } else {
+      // NFR / FTL items (quantity only)
+      openingStockData = {
+        simple: {
+          quantity: Number(openingStockFilled) || 0,
+          purchasePrice: Number(currentPurchasePrice) || 0,
+          sellingPrice: Number(currentSalePrice) || 0,
+        },
+      };
+      stockData = { quantity: Number(openingStockFilled) || 0 };
+    }
+
+    // Create Mapping
+    const newMapping = new AgencyProduct({
+      agencyId,
+      globalProductId,
+      itemCode: itemCode || globalProduct.productCode,
+      localName: localName || globalProduct.name,
+      purchasePrice: Number(currentPurchasePrice) || 0,
+      currentSalePrice: Number(currentSalePrice) || 0,
+      priceEffectiveDate: priceEffectiveDate || new Date(),
+      isEnabled: true,
+      openingStock: openingStockData,
+      stock: {
+        filled: stockData.filled || 0,
+        empty: stockData.empty || 0,
+        defective: stockData.defective || 0,
+        sound: stockData.sound || 0,
+        defectivePR: stockData.defectivePR || 0,
+        quantity: stockData.quantity || 0,
+      },
+    });
+
+    await newMapping.save({ session });
+
+    // Phase 5: Godown Routing for Cylinder Products
+    // Check if product is a cylinder type that needs godown routing
+    const isCylinderType =
+      globalProduct.productType === "CYLINDER" || globalProduct.isFiber === true || globalProduct.category === "FTL";
+
+    if (isCylinderType) {
+      try {
+        // Get or create default godown
+        const defaultGodown = await getOrCreateDefaultGodown(agencyId, session);
+
+        // Create/update StockLedger entry for this product at the default godown
+        await StockLedger.findOneAndUpdate(
+          {
             agencyId,
-            globalProductId,
-            itemCode: itemCode || globalProduct.productCode,
-            localName: localName || globalProduct.name,
-            purchasePrice: Number(currentPurchasePrice) || 0,
-            currentSalePrice: Number(currentSalePrice) || 0,
-            priceEffectiveDate: priceEffectiveDate || new Date(),
-            isEnabled: true,
-            openingStock: openingStockData,
-            stock: {
+            agencyProductId: newMapping._id,
+            locationId: defaultGodown._id,
+          },
+          {
+            $setOnInsert: {
+              agencyId,
+              agencyProductId: newMapping._id,
+              locationId: defaultGodown._id,
+              stock: {
                 filled: stockData.filled || 0,
                 empty: stockData.empty || 0,
                 defective: stockData.defective || 0,
                 sound: stockData.sound || 0,
                 defectivePR: stockData.defectivePR || 0,
-                quantity: stockData.quantity || 0
-            }
-        });
-
-        await newMapping.save();
-
-        // Also create an OPENING_STOCK transaction? 
-        // Ideally yes, but for now we just set the initial state. 
-        // The user can create transactions later or we can auto-create here.
-        // Let's keep it simple for now as requested.
-
-        res.status(201).json({ success: true, message: "Product added to agency inventory", product: newMapping });
-    } catch (error) {
-        console.error("Map Error:", error);
-        res.status(500).json({ success: false, message: error.message });
+                quantity:
+                  (stockData.filled || 0) +
+                  (stockData.empty || 0) +
+                  (stockData.defective || 0) +
+                  (stockData.sound || 0) +
+                  (stockData.defectivePR || 0),
+              },
+              lastMovementAt: new Date(),
+            },
+          },
+          { upsert: true, new: true, session },
+        );
+      } catch (ledgerError) {
+        // Log but don't block product creation
+        console.error("StockLedger creation error for product godown routing:", ledgerError);
+      }
     }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ success: true, message: "Product added to agency inventory", product: newMapping });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Map Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 module.exports = {
-    createProduct,
-    getProducts,
-    updateProduct,
-    toggleProductStatus,
-    deleteProduct,
-    getUnmappedGlobalProducts,
-    mapGlobalProduct
+  createProduct,
+  getProducts,
+  updateProduct,
+  toggleProductStatus,
+  deleteProduct,
+  getUnmappedGlobalProducts,
+  mapGlobalProduct,
 };

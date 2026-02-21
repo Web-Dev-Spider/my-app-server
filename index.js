@@ -21,12 +21,13 @@ app.use(
       "https://dfriend.in",
       "https://www.dfriend.in",
       "https://my-app-client-inky.vercel.app",
-      "https://api.dfriend.in",
+
       "http://localhost:5173",
     ],
     credentials: true,
   }),
 );
+
 app.use(express.json());
 app.use(cookieParser());
 

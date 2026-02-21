@@ -3,10 +3,13 @@ const StockLocation = require("../models/StockLocation");
 // POST /api/inventory/stock-location
 const createStockLocation = async (req, res) => {
   try {
-    const { locationType, name, code, address, supplierDetails, notes } = req.body;
+    const { locationType, type, name, code, address, contact, supplierDetails, notes } = req.body;
+
+    // Support both 'type' and 'locationType' field names
+    const finalLocationType = locationType || type;
 
     // Prevent manual creation of VEHICLE type locations (auto-created only)
-    if (locationType === "VEHICLE") {
+    if (finalLocationType === "VEHICLE") {
       return res.status(400).json({
         success: false,
         message: "VEHICLE type locations are auto-created when vehicles are registered. Cannot create manually.",
@@ -14,7 +17,7 @@ const createStockLocation = async (req, res) => {
     }
 
     // Validate required fields
-    if (!locationType || !name) {
+    if (!finalLocationType || !name) {
       return res.status(400).json({
         success: false,
         message: "locationType and name are required",
@@ -23,10 +26,11 @@ const createStockLocation = async (req, res) => {
 
     const location = await StockLocation.create({
       agencyId: req.user.agencyId,
-      locationType,
+      locationType: finalLocationType,
       name,
       code,
       address,
+      contact,
       supplierDetails,
       notes,
     });
@@ -113,7 +117,7 @@ const getStockLocation = async (req, res) => {
 // PUT /api/inventory/stock-location/:id
 const updateStockLocation = async (req, res) => {
   try {
-    const { name, address, supplierDetails, isActive, notes } = req.body;
+    const { name, address, contact, supplierDetails, isActive, notes } = req.body;
 
     // Prevent changing critical fields
     if (req.body.locationType || req.body.vehicleId) {
@@ -127,6 +131,7 @@ const updateStockLocation = async (req, res) => {
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (address !== undefined) updates.address = address;
+    if (contact !== undefined) updates.contact = contact;
     if (supplierDetails !== undefined) updates.supplierDetails = supplierDetails;
     if (isActive !== undefined) updates.isActive = isActive;
     if (notes !== undefined) updates.notes = notes;

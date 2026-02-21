@@ -44,6 +44,8 @@ const stockLocationSchema = new mongoose.Schema(
     // For GODOWN / SHOWROOM
     address: { type: String },
 
+    contact: { type: String },
+
     isActive: {
       type: Boolean,
       default: true,

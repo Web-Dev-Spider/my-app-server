@@ -49,9 +49,19 @@ router.put("/compliance-notifications/mark-read", vehicleController.markNotifica
 
 // Stock Locations
 router.post("/stock-location", stockLocationController.createStockLocation);
+router.post("/stock-locations", stockLocationController.createStockLocation);
 router.get("/stock-locations", stockLocationController.getStockLocations);
 router.get("/stock-location/:id", stockLocationController.getStockLocation);
 router.put("/stock-location/:id", stockLocationController.updateStockLocation);
+router.put("/stock-locations/:id", stockLocationController.updateStockLocation);
 router.get("/stock-location/:id/stock", stockLocationController.getLocationStock);
+
+// Stock Movement (Phase 2)
+router.post("/stock/issue", inventoryController.issueStockToVehicle);
+router.post("/stock/settle/:transactionId", inventoryController.settleVehicleReturn);
+router.get("/stock/open", inventoryController.getOpenVehicleIssues);
+router.get("/stock/transactions", inventoryController.getStockTransactions);
+router.get("/stock/location/:locationId", inventoryController.getLocationStockBalance);
+router.post("/stock/add-to-godown", inventoryController.addStockToGodown);
 
 module.exports = router;
