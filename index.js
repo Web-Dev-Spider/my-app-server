@@ -15,21 +15,27 @@ const { hashPassword } = require("./utils/hashPassword.js");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(cors({
-  origin: ["https://dfriend.in",
-    "https://www.dfriend.in", "https://my-app-client-inky.vercel.app", "http://localhost:5173"], credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "https://dfriend.in",
+      "https://www.dfriend.in",
+      "https://my-app-client-inky.vercel.app",
+      "https://api.dfriend.in",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  }),
+);
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
 
-
-app.use("/auth", authRouter)
+app.use("/auth", authRouter);
 app.use("/user", userRouter);
 app.use("/pdf", pdfRouter);
 
 const inventoryRouter = require("./routes/inventoryRouter.js");
 app.use("/inventory", inventoryRouter);
-
 
 const adminRouter = require("./routes/adminRouter.js");
 
