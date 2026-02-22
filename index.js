@@ -43,6 +43,9 @@ const adminRouter = require("./routes/adminRouter.js");
 // app.use("/api/v1/admin");
 app.use("/admin", adminRouter);
 
+const superAdminRouter = require("./routes/superAdminRouter.js");
+app.use("/super-admin", superAdminRouter);
+
 app.get("/", (req, res) => {
   res.send("Welcome to home page");
 });
