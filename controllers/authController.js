@@ -41,27 +41,25 @@ const register = async (req, res, next) => {
     const newAgency = await Agency.create({ name: gasAgencyName, sapcode, email, company });
     // console.log("Response received while createing", newAgency);
 
-    // Auto-create default StockLocations for the new agency
+    // Auto-create default StockLocations for the new agency (non-blocking)
     const StockLocation = require("../models/StockLocation");
-    try {
-      await StockLocation.create([
-        {
-          agencyId: newAgency._id,
-          locationType: "GODOWN",
-          name: "Main Godown",
-          code: "GDN-01",
-        },
-        {
-          agencyId: newAgency._id,
-          locationType: "SHOWROOM",
-          name: "Showroom",
-          code: "SRM-01",
-        },
-      ]);
-    } catch (locationError) {
-      console.error("Warning: Could not create default stock locations:", locationError);
-      // Continue with agency creation even if locations fail
-    }
+    StockLocation.create([
+      {
+        agencyId: newAgency._id,
+        locationType: "GODOWN",
+        name: "Main Godown",
+        code: "GDN-01",
+      },
+      {
+        agencyId: newAgency._id,
+        locationType: "SHOWROOM",
+        name: "Showroom",
+        code: "SRM-01",
+      },
+    ]).catch((locationError) => {
+      console.error("Background: Could not create default stock locations:", locationError);
+      // Don't fail agency creation if locations fail
+    });
 
     //if agency is created then create admin user
     if (newAgency) {
@@ -81,7 +79,7 @@ const register = async (req, res, next) => {
       // console.log("Response received while createing user", newUser);
 
       if (newUser) {
-        // Send registration confirmation email
+        // Send registration confirmation email ASYNCHRONOUSLY (non-blocking)
         const registrationEmailHtml = `
           <h2>Registration Confirmation</h2>
           <p>Welcome to our application!</p>
@@ -96,20 +94,18 @@ const register = async (req, res, next) => {
           <p>Do not share this information with anyone.</p>
         `;
 
-        try {
-          await sendEmail({
-            email,
-            subject: "Registration Confirmation - Pending Approval",
-            html: registrationEmailHtml,
-            message: `Your agency registration has been received. Your admin account is pending approval from our team.`,
-          });
-        } catch (emailError) {
-          console.error("Error sending registration email:", emailError);
-          // Don't fail the registration if email fails
-        }
+        // Fire-and-forget: Send email in background without blocking response
+        sendEmail({
+          email,
+          subject: "Registration Confirmation - Pending Approval",
+          html: registrationEmailHtml,
+          message: `Your agency registration has been received. Your admin account is pending approval from our team.`,
+        }).catch((emailError) => {
+          // Log error but don't fail registration
+          console.error("Background email send failed:", emailError.message);
+        });
 
-        // const token = generateJwtToken({ userId: newUser._id, role: newUser.role, agency: newUser.agencyId, username });
-        // res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: EXPIRES_IN });
+        // Return success immediately - email will be sent in background
         return res.status(201).json({ message: "Agency Added and admin created", success: true });
       } else {
         return res.status(500).json({ success: false, message: "Error creating user" });
